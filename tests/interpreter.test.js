@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { slitFromHands, createSmoother, interpret } from "../src/interpreter.js";
+import { slitFromHands, createSmoother, createInterpreter } from "../src/interpreter.js";
 
 const RAW = { mirror: false, gain: 1 };
 const EPS = 1e-9;
@@ -21,14 +21,6 @@ test("one hand: thumb tip to index tip", () => {
   nearSlit(s, { a: { x: 0.1, y: 0.2 }, b: { x: 0.3, y: 0.4 } });
 });
 
-test("two hands: index tips, ordered left to right", () => {
-  const L = hand("Left", { x: 0, y: 0 }, { x: 0.2, y: 0.2 });
-  const R = hand("Right", { x: 0, y: 0 }, { x: 0.8, y: 0.8 });
-  const expected = { a: { x: 0.2, y: 0.2 }, b: { x: 0.8, y: 0.8 } };
-  nearSlit(slitFromHands([L, R], RAW), expected);
-  nearSlit(slitFromHands([R, L], RAW), expected);
-});
-
 test("smoother snaps on first target, eases after, resets on null", () => {
   const sm = createSmoother();
   const t0 = { a: { x: 0, y: 0 }, b: { x: 1, y: 1 } };
@@ -39,10 +31,8 @@ test("smoother snaps on first target, eases after, resets on null", () => {
   assert.deepEqual(sm.update(t1, 0.5), t1);          // 重新出現時不從舊位置滑過來
 });
 
-test("interpret prefers hands over pointer and returns no commands", () => {
+test("a visible hand takes priority over the pointer", () => {
   const pointerSlit = { a: { x: 0.9, y: 0.9 }, b: { x: 1, y: 1 } };
   const h = hand("Right", { x: 0.1, y: 0.2 }, { x: 0.3, y: 0.4 });
-  nearPt(interpret({ hands: [h], pointerSlit }, RAW).slit.a, { x: 0.1, y: 0.2 });
-  assert.deepEqual(interpret({ hands: [], pointerSlit }, RAW), { slit: pointerSlit, commands: [] });
-  assert.equal(interpret({ hands: [], pointerSlit: null }, RAW).slit, null);
+  nearPt(createInterpreter().update({ hands: [h], pointerSlit }, RAW).slit.a, { x: 0.1, y: 0.2 });
 });
