@@ -10,6 +10,9 @@ const SLOT_GAP = 14;   // room above the print for the slot
 const SLOT_OVER = 16;  // slot reaches this far past each side of the paper
 const RED = "#ff2828";
 const IDLE = "#777";
+const SIDE_SHARE = 0.5;  // the source aims for about half the left column's height
+const SIDE_MIN = 200;    // left column width bounds, css px …
+const SIDE_MAX = 0.34;   // … and share of the window width
 const narrow = window.matchMedia("(max-width: 760px)");
 const px = (n) => `${Math.round(n)}px`;
 
@@ -72,7 +75,20 @@ export function createView(p) {
   const tray = createTray(outPlate);
   let img = null;      // image rect inside the p5 canvas, for drawing and toSource
 
+  /** Left column width follows the source's shape: landscape sources get a wider column. */
+  function sizeSide(aspect) {
+    const page = srcPlate.closest(".page");
+    let cols = "";
+    if (!narrow.matches) {
+      const rowH = srcPlate.parentElement.clientHeight;
+      const w = Math.min(window.innerWidth * SIDE_MAX, Math.max(SIDE_MIN, rowH * SIDE_SHARE * aspect));
+      cols = `${Math.round(w)}px 1fr`;
+    }
+    if (page.style.gridTemplateColumns !== cols) page.style.gridTemplateColumns = cols;
+  }
+
   function layout(source, output) {
+    sizeSide(source.width / source.height);
     // plate 1: the canvas is the image plus a bleed on every side
     const s = fitInto(srcPlate, source.width / source.height, 0, 0, 0.42);
     const cw = Math.round(s.w + BLEED * 2);
