@@ -43,3 +43,16 @@ body {
   display: block;
   touch-action: none;
 }
+
+#camThumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: #000;
+  margin: 0 0 12px;
+}
+
+#camThumb[hidden] {
+  display: none;
+}
