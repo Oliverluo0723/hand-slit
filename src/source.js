@@ -57,6 +57,13 @@ export function createTestSource() {
   return fromCanvas(c);
 }
 
+/** Fetch an image by URL and load it like a dropped file. */
+export async function loadUrlSource(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`無法讀取 ${url}`);
+  return loadImageSource(await res.blob());
+}
+
 export async function loadImageSource(file) {
   let bitmap;
   try {

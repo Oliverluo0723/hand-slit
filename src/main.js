@@ -4,9 +4,11 @@ import { createPointer } from "./pointer.js";
 import { createInterpreter, createSmoother } from "./interpreter.js";
 import { sampleLine } from "./scanner.js";
 import { createOutput } from "./output.js";
-import { createTestSource } from "./source.js";
+import { createTestSource, loadUrlSource } from "./source.js";
 import { createView } from "./view.js";
 import { initUI } from "./ui.js";
+
+const DEFAULT_IMAGE = "assets/default.webp";
 
 const PORTRAIT = { width: 1790, height: 2560 };
 const LANDSCAPE = { width: 2560, height: 1790 };
@@ -54,7 +56,14 @@ new p5((p) => {
   let pointer;
   p.setup = () => {
     p.createCanvas(1, 1).parent(document.getElementById("figSource"));
-    setSource(createTestSource());
+    // the drawn test pattern stands in until the default image arrives (or if it can't)
+    const fallback = createTestSource();
+    setSource(fallback);
+    loadUrlSource(DEFAULT_IMAGE)
+      .then((src) => {
+        if (state.source === fallback && state.output.pos === 0) setSource(src);
+      })
+      .catch((err) => console.warn("default image unavailable, keeping the test pattern", err));
     view = createView(p);
     pointer = createPointer(p.canvas, view.toSource);
     initUI(tracker);
