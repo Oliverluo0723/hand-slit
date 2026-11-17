@@ -21,7 +21,19 @@
       <header class="intro">
         <h1>HAND SLIT</h1>
         <p class="how">舉起雙手捏住，兩手之間就是掃描線。滑鼠也可以拖曳。</p>
-        <canvas id="camThumb" width="240" height="180" hidden></canvas>
+        <div class="foot">
+          <canvas id="camThumb" width="240" height="180" hidden></canvas>
+          <div class="playrow">
+            <button id="recBtn" class="play on" aria-label="暫停" title="空白鍵">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <circle class="disc" cx="32" cy="32" r="31" />
+                <path class="icon-play" d="M26 20 L46 32 L26 44 Z" />
+                <g class="icon-pause"><rect x="23" y="21" width="6" height="22" /><rect x="35" y="21" width="6" height="22" /></g>
+              </svg>
+            </button>
+            <span class="playlabel"><span id="recLabel">錄製中</span><span class="dim">空白鍵</span></span>
+          </div>
+        </div>
       </header>
 
       <figure id="figSource" class="plate">
@@ -46,13 +58,11 @@
         <span class="group">
           <button id="loadBtn" class="txt" title="也可以把圖片檔拖進頁面">載入圖片</button>
           <input id="fileInput" type="file" accept="image/*" hidden />
-          <button id="recBtn" class="txt rec" title="空白鍵">錄製中</button>
           <button id="clearBtn" class="txt" title="C">清除</button>
           <span class="field">
             <button id="pngBtn" class="txt" title="S" disabled>匯出 PNG</button>
             <button id="jpgBtn" class="txt" disabled>JPEG</button>
           </span>
-          <span class="dim keys">空白鍵 暫停</span>
         </span>
       </footer>
     </div>

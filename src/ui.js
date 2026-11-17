@@ -42,8 +42,9 @@ async function exportImage(type) {
 function setRecording(on) {
   state.recording = on;
   const b = $("recBtn");
-  b.textContent = on ? "錄製中" : "已暫停";
   b.classList.toggle("on", on);
+  b.setAttribute("aria-label", on ? "暫停" : "錄製");
+  $("recLabel").textContent = on ? "錄製中" : "已暫停";
 }
 
 function setPortrait(portrait) {
