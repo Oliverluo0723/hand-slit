@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>HAND SLIT — spike</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; background: #e9e7e2; color: #111;
+         font: 13px "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .5px; }
+  p { margin: 0 0 12px; color: #444; line-height: 1.5; max-width: 900px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 12px; }
+  button { font: inherit; font-size: 12px; font-weight: 600; padding: 8px 10px; background: transparent;
+           color: #111; border: 1px solid #111; border-radius: 4px; cursor: pointer; }
+  button.on { background: #111; color: #fff; }
+  label { display: flex; align-items: center; gap: 6px; }
+  input[type=range] { width: 120px; accent-color: #111; }
+  #stage canvas { display: block; max-width: 100%; height: auto !important; border-radius: 6px; }
+  #status { font-weight: 700; margin-top: 10px; }
+  kbd { font: inherit; font-size: 10px; background: #fff; border: 1px solid #bbb; border-radius: 3px; padding: 1px 4px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="https://unpkg.com/ml5@1.4.0/dist/ml5.min.js"></script>
+</head>
+<body>
+  <h1>HAND SLIT <span style="font-weight:400;font-size:12px">試玩版（之後會丟掉）</span></h1>
+  <p>
+    左邊是素材，右邊是成品。<b>雙手食指</b>之間的線就是掃描線；只舉一隻手時，線在<b>拇指和食指</b>之間。
+    線每一幀從素材上取一條，貼到右邊的下一欄。沒有鏡頭也能試：在左邊<b>按住滑鼠拖</b>拉出一條線。
+    <kbd>Space</kbd> 錄製/暫停　<kbd>C</kbd> 清除　<kbd>S</kbd> 存圖
+  </p>
+  <div class="bar">
+    <button id="loadBtn">載入圖片</button>
+    <input id="file" type="file" accept="image/*" hidden />
+    <button id="srcBtn">素材：圖片</button>
+    <button id="recBtn" class="on">錄製中</button>
+    <button id="clearBtn">清除</button>
+    <button id="saveBtn">存圖</button>
+    <label>每幀寬度 <input id="thick" type="range" min="1" max="8" value="2" /></label>
+    <label>平滑 <input id="smooth" type="range" min="5" max="100" value="35" /></label>
+  </div>
+  <div id="stage"></div>
+  <div id="status">啟動中…</div>
+
+<script>
+const SW = 360, SH = 480, OW = 720, OH = 480, GAP = 16;
+const $ = (id) => document.getElementById(id);
+
+let src, out, colImg = null;
+let video, camReady = false, handPose = null, modelState = "載入手部模型中…";
+let hands = [];
+let srcImg = null, useCam = false, srcDirty = true;
+let recording = true, outX = 0;
+let A = null, B = null;      // smoothed slit endpoints, in source-panel coords
+let mouseA = null;
+
+function setup() {
+  pixelDensity(1);
+  createCanvas(SW + GAP + OW, SH).parent("stage");
+  src = createGraphics(SW, SH); src.pixelDensity(1);
+  out = createGraphics(OW, OH); out.pixelDensity(1); out.background(0);
+
+  video = createCapture({ video: { width: 640, height: 480 }, audio: false }, () => { camReady = true; });
+  video.size(640, 480);
+  video.hide();
+
+  if (window.ml5) {
+    handPose = ml5.handPose({ maxHands: 2, flipped: false }, () => {
+      modelState = "模型就緒";
+      handPose.detectStart(video, (r) => { hands = r || []; });
+    });
+  } else {
+    modelState = "ml5 沒載入（只能用滑鼠）";
+  }
+
+  $("loadBtn").onclick = () => $("file").click();
+  $("file").onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    loadImage(URL.createObjectURL(f), (img) => { srcImg = img; setCam(false); srcDirty = true; });
+  };
+  $("srcBtn").onclick = () => setCam(!useCam);
+  $("recBtn").onclick = toggleRec;
+  $("clearBtn").onclick = clearOut;
+  $("saveBtn").onclick = saveOut;
+}
+
+function setCam(on) {
+  useCam = on;
+  srcDirty = true;
+  $("srcBtn").textContent = on ? "素材：相機" : "素材：圖片";
+  $("srcBtn").classList.toggle("on", on);
+}
+function toggleRec() {
+  recording = !recording;
+  $("recBtn").textContent = recording ? "錄製中" : "已暫停";
+  $("recBtn").classList.toggle("on", recording);
+}
+function clearOut() { out.background(0); outX = 0; }
+function saveOut() {
+  const a = document.createElement("a");
+  a.href = out.elt.toDataURL("image/png");
+  a.download = "hand-slit-" + Date.now() + ".png";
+  a.click();
+}
+
+function cover(g, img, iw, ih) {
+  const s = Math.max(SW / iw, SH / ih);
+  g.image(img, (SW - iw * s) / 2, (SH - ih * s) / 2, iw * s, ih * s);
+}
+
+function drawTestImage(g) {
+  g.background(233, 231, 226);
+  g.noStroke();
+  for (let i = 0; i < 12; i++) {           // colour bars
+    g.fill((i * 37) % 255, (i * 83) % 255, (i * 151) % 255);
+    g.rect(i * (SW / 12), 0, SW / 12, 60);
+  }
+  g.stroke(17); g.strokeWeight(1);
+  for (let x = 0; x <= SW; x += 30) g.line(x, 60, x, SH);   // grid
+  for (let y = 60; y <= SH; y += 30) g.line(0, y, SW, y);
+  g.noStroke(); g.fill(220, 60, 40); g.circle(SW / 2, 230, 180);
+  g.fill(17); g.circle(SW / 2, 230, 70);
+  g.stroke(20, 80, 200); g.strokeWeight(6);
+  g.line(20, 440, SW - 20, 340);
+  g.noStroke(); g.fill(17); g.textSize(64); g.textStyle(BOLD); g.textAlign(CENTER, CENTER);
+  g.text("SCAN", SW / 2, 410);
+}
+
+function renderSource() {
+  if (useCam && camReady) {
+    src.push(); src.translate(SW, 0); src.scale(-1, 1);
+    cover(src, video, video.elt.videoWidth || 640, video.elt.videoHeight || 480);
+    src.pop();
+    src.loadPixels();
+    return;
+  }
+  if (!srcDirty) return;
+  if (srcImg) { src.background(0); cover(src, srcImg, srcImg.width, srcImg.height); }
+  else drawTestImage(src);
+  src.loadPixels();
+  srcDirty = false;
+}
+
+// camera keypoint -> source panel coords (mirrored). In image mode the middle
+// 70% of the camera frame covers the whole panel, so the edges are reachable.
+function mapPt(k) {
+  const vw = video.elt.videoWidth || 640, vh = video.elt.videoHeight || 480;
+  const gain = useCam ? 1 : 1.4;
+  const u = (1 - k.x / vw - 0.5) * gain + 0.5;
+  const v = (k.y / vh - 0.5) * gain + 0.5;
+  return { x: u * SW, y: v * SH };
+}
+
+function getTarget() {
+  if (hands.length >= 2) {
+    let h1 = hands[0], h2 = hands[1];
+    if (h1.handedness === "Right" && h2.handedness === "Left") [h1, h2] = [h2, h1];
+    return [mapPt(h1.keypoints[8]), mapPt(h2.keypoints[8])];
+  }
+  if (hands.length === 1) {
+    return [mapPt(hands[0].keypoints[4]), mapPt(hands[0].keypoints[8])];
+  }
+  if (mouseIsPressed && mouseA) {
+    return [mouseA, { x: constrain(mouseX, 0, SW), y: constrain(mouseY, 0, SH) }];
+  }
+  return null;
+}
+
+function updateSlit() {
+  const t = getTarget();
+  if (!t) { A = B = null; return; }
+  const k = +$("smooth").value / 100;
+  if (!A) { A = { ...t[0] }; B = { ...t[1] }; return; }
+  A.x += (t[0].x - A.x) * k; A.y += (t[0].y - A.y) * k;
+  B.x += (t[1].x - B.x) * k; B.y += (t[1].y - B.y) * k;
+}
+
+function capture() {
+  const w = Math.min(+$("thick").value, OW - outX);
+  if (w <= 0) return;
+  const ctx = out.drawingContext;
+  if (!colImg || colImg.width !== w) colImg = ctx.createImageData(w, OH);
+  const d = colImg.data, p = src.pixels;
+  for (let y = 0; y < OH; y++) {
+    const t = y / (OH - 1);
+    const sx = Math.round(A.x + (B.x - A.x) * t);
+    const sy = Math.round(A.y + (B.y - A.y) * t);
+    let r = 0, g = 0, b = 0;
+    if (sx >= 0 && sx < SW && sy >= 0 && sy < SH) {
+      const i = (sy * SW + sx) * 4;
+      r = p[i]; g = p[i + 1]; b = p[i + 2];
+    }
+    for (let x = 0; x < w; x++) {
+      const j = (y * w + x) * 4;
+      d[j] = r; d[j + 1] = g; d[j + 2] = b; d[j + 3] = 255;
+    }
+  }
+  ctx.putImageData(colImg, outX, 0);
+  outX += w;
+}
+
+function draw() {
+  background(233, 231, 226);
+  renderSource();
+  image(src, 0, 0);
+
+  // hand keypoints
+  noStroke(); fill(255, 255, 255, 200);
+  for (const h of hands) for (const k of h.keypoints) { const q = mapPt(k); circle(q.x, q.y, 4); }
+
+  updateSlit();
+  const full = outX >= OW;
+  if (A) {
+    stroke(255); strokeWeight(4); line(A.x, A.y, B.x, B.y);
+    stroke(255, 40, 40); strokeWeight(2); line(A.x, A.y, B.x, B.y);
+    noStroke(); fill(255, 40, 40); circle(A.x, A.y, 10);
+    fill(255); stroke(255, 40, 40); circle(B.x, B.y, 10);
+    if (recording && !full) capture();
+  }
+
+  image(out, SW + GAP, 0);
+  if (!full) { stroke(255, 40, 40); strokeWeight(1); line(SW + GAP + outX, 0, SW + GAP + outX, OH); }
+
+  $("status").textContent =
+    modelState + "　|　手：" + hands.length +
+    "　|　" + (full ? "成品已滿，按 C 清除" : !recording ? "已暫停" : A ? "掃描中" : "等待掃描線") +
+    "　|　" + Math.round((100 * outX) / OW) + "%";
+}
+
+function mousePressed() {
+  if (mouseX >= 0 && mouseX <= SW && mouseY >= 0 && mouseY <= SH) mouseA = { x: mouseX, y: mouseY };
+}
+function mouseReleased() { mouseA = null; }
+
+function keyPressed() {
+  if (key === " ") { toggleRec(); return false; }
+  if (key === "c" || key === "C") clearOut();
+  if (key === "s" || key === "S") saveOut();
+}
+</script>
+</body>
+</html>
