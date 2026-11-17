@@ -53,7 +53,6 @@ function setPortrait(portrait) {
   $("portraitBtn").classList.toggle("on", portrait);
   $("landscapeBtn").classList.toggle("on", !portrait);
   resetOutput();
-  $("sizeValue").textContent = `${state.output.width} × ${state.output.height}`;
 }
 
 const setText = (el, text) => {
@@ -62,11 +61,8 @@ const setText = (el, text) => {
 
 function tick() {
   const o = state.output;
-  const pct = Math.round((100 * o.pos) / o.travel);
-  const srcNote = errorMessage || state.sourceNote;
-  setText($("sourceNote"), srcNote ? `。${srcNote}` : "");
-  setText($("outputNote"), `${state.outputNote} ${pct}%`);
-  $("outputNote").classList.toggle("live", state.live);
+  // next to the play button: a passing notice (camera, model, file) or the key
+  setText($("hint"), errorMessage || state.notice || "空白鍵");
   $("pngBtn").disabled = o.pos === 0;
   $("jpgBtn").disabled = o.pos === 0;
   requestAnimationFrame(tick);

@@ -19,8 +19,7 @@ export const state = {
   portrait: true,
   source: null,
   output: null,
-  sourceNote: "",    // under plate 1: tracking status
-  outputNote: "",    // under plate 2: recording status
+  notice: "",        // tracking status shown next to the play button, "" when fine
   live: false,       // a strip was written this frame
 };
 
@@ -42,18 +41,11 @@ const smoother = createSmoother();
 const interpreter = createInterpreter();
 window.handSlit = { state, tracker };   // for debugging in the console
 
-function sourceNote() {
-  if (tracker.status === "no-camera") return "沒有鏡頭，用滑鼠在圖上拖曳";
+function trackingNotice() {
+  if (tracker.status === "no-camera") return "沒有鏡頭，用滑鼠拖曳";
   if (tracker.status === "loading") return "載入手部模型中…";
-  if (tracker.status === "error") return "手部追蹤無法啟動，用滑鼠在圖上拖曳";
+  if (tracker.status === "error") return "手部追蹤無法啟動，用滑鼠拖曳";
   return "";
-}
-
-function outputNote(slit, engaged) {
-  if (state.output.full) return "已滿";
-  if (!state.recording) return "已暫停";
-  if (slit && !engaged) return "捏住雙手開始";
-  return slit ? "掃描中" : "等待掃描線";
 }
 
 new p5((p) => {
@@ -81,8 +73,7 @@ new p5((p) => {
     }
 
     state.live = Boolean(recordingNow);
-    state.sourceNote = sourceNote();
-    state.outputNote = outputNote(slit, engaged);
+    state.notice = trackingNotice();
     view.draw({ source: state.source, output: state.output, slit, hands, tracker, live: state.live, pinched });
   };
 });

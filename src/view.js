@@ -1,7 +1,6 @@
 // Draws plate 1 with p5 (source, hand points, slit) and lays out plate 2: the
 // output is a DOM "print" sliding out of a slot cut into the page (see
-// style.css .tray). Captions sit right under each image. Also converts
-// screen → source coords.
+// style.css .tray). Also converts screen → source coords.
 import { fitPlate, mapCameraToSource } from "./geometry.js";
 
 const BLEED = 28;      // canvas reaches past the image so slit ends stay visible
@@ -9,8 +8,6 @@ const MARGIN = 8;      // white border of the print, css px
 const SLOT_H = 9;      // height of the slot opening
 const SLOT_GAP = 14;   // room above the print for the slot
 const SLOT_OVER = 16;  // slot reaches this far past each side of the paper
-const CAP_GAP = 10;    // image → caption
-const CAP_ROOM = 48;   // room reserved under each plate for its caption
 const RED = "#ff2828";
 const IDLE = "#777";
 const narrow = window.matchMedia("(max-width: 760px)");
@@ -61,19 +58,17 @@ function fitInto(plate, aspect, extraW, extraH, narrowShare) {
   const W = plate.clientWidth;
   if (narrow.matches) {
     const fit = fitPlate(W, Math.max(200, window.innerHeight * narrowShare), aspect, extraW, extraH);
-    const h = px(fit.h + extraH + CAP_ROOM);
+    const h = px(fit.h + extraH);
     if (plate.style.height !== h) plate.style.height = h;
     return fit;
   }
   if (plate.style.height) plate.style.height = "";
-  return fitPlate(W, plate.clientHeight - CAP_ROOM, aspect, extraW, extraH);
+  return fitPlate(W, plate.clientHeight, aspect, extraW, extraH);
 }
 
 export function createView(p) {
   const srcPlate = document.getElementById("figSource");
   const outPlate = document.getElementById("figOutput");
-  const srcCaption = srcPlate.querySelector("figcaption");
-  const outCaption = outPlate.querySelector("figcaption");
   const tray = createTray(outPlate);
   let img = null;      // image rect inside the p5 canvas, for drawing and toSource
 
@@ -87,13 +82,12 @@ export function createView(p) {
       Object.assign(p.canvas.style, { left: px(-BLEED), top: px(-BLEED) });
     }
     img = { x: BLEED, y: BLEED, w: s.w, h: s.h };
-    srcCaption.style.top = px(s.h + CAP_GAP);
 
     // plate 2, the subject: slot, then the print with its white border, centred
     const o = fitInto(outPlate, output.width / output.height, MARGIN * 2, SLOT_GAP + MARGIN * 2, 0.8);
     const ox = narrow.matches ? 0 : Math.max(0, (outPlate.clientWidth - o.w - MARGIN * 2) / 2);
     tray.update({ x: ox + MARGIN, y: SLOT_GAP + MARGIN, w: o.w, h: o.h }, output);
-    Object.assign(outCaption.style, { top: px(SLOT_GAP + MARGIN * 2 + o.h + CAP_GAP), left: px(ox) });
+
   }
 
   function draw({ source, output, slit, hands, tracker, live, pinched }) {
