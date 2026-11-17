@@ -5,6 +5,9 @@
     <title>HAND SLIT</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"
@@ -14,48 +17,44 @@
     <script type="module" src="src/main.js"></script>
   </head>
   <body>
-    <aside id="panel">
-      <h1>HAND SLIT</h1>
-      <canvas id="camThumb" width="260" height="195" hidden></canvas>
-      <p class="help">
-        舉起雙手，食指之間的線就是掃描線。單手時線在拇指和食指之間。也可以用滑鼠在圖片上拖曳。
-      </p>
+    <div class="page">
+      <header class="intro">
+        <h1>HAND SLIT</h1>
+        <p class="how">舉起雙手捏住，兩手之間就是掃描線。滑鼠也可以拖曳。</p>
+        <canvas id="camThumb" width="240" height="180" hidden></canvas>
+      </header>
 
-      <button id="loadBtn" class="btn wide">載入圖片</button>
-      <input id="fileInput" type="file" accept="image/*" hidden />
-      <div class="row"><span>成品尺寸</span><span id="sizeValue">1790 × 2560</span></div>
-      <div class="pair">
-        <button id="portraitBtn" class="btn active">直向</button>
-        <button id="landscapeBtn" class="btn">橫向</button>
-      </div>
+      <figure id="figSource" class="plate">
+        <figcaption><b>圖 1</b>　素材<span id="sourceNote"></span></figcaption>
+      </figure>
 
-      <div class="hr"></div>
+      <figure id="figOutput" class="plate">
+        <figcaption>
+          <b>圖 2</b>　成品，<span id="sizeValue">1790 × 2560</span>，<span id="outputNote"></span>
+        </figcaption>
+      </figure>
 
-      <div class="row"><span>每幀寬度</span><span id="thickValue">4 px</span></div>
-      <input id="thickSlider" type="range" min="1" max="40" value="4" />
-      <div class="row"><span>平滑</span><span id="smoothValue">65%</span></div>
-      <input id="smoothSlider" type="range" min="0" max="95" value="65" />
-
-      <div class="hr"></div>
-
-      <button id="recBtn" class="btn primary wide">錄製中</button>
-      <div class="pair">
-        <button id="clearBtn" class="btn">清除</button>
-        <span></span>
-      </div>
-      <div class="pair">
-        <button id="pngBtn" class="btn" disabled>匯出 PNG</button>
-        <button id="jpgBtn" class="btn" disabled>匯出 JPEG</button>
-      </div>
-
-      <p id="statusLine">&nbsp;</p>
-      <p class="hints">
-        <kbd>Space</kbd> 錄製 / 暫停<br />
-        <kbd>C</kbd> 清除<br />
-        <kbd>S</kbd> 匯出 PNG<br />
-        也可以把圖片檔拖進頁面。
-      </p>
-    </aside>
-    <main id="stage"></main>
+      <footer class="colophon">
+        <span class="group">
+          <span class="field">每幀寬度 <span id="thick" class="num" tabindex="0" role="slider" aria-label="每幀寬度"></span></span>
+          <span class="field">平滑 <span id="smooth" class="num" tabindex="0" role="slider" aria-label="平滑"></span></span>
+          <span class="field">
+            <button id="portraitBtn" class="txt on">直向</button>
+            <button id="landscapeBtn" class="txt">橫向</button>
+          </span>
+        </span>
+        <span class="group">
+          <button id="loadBtn" class="txt" title="也可以把圖片檔拖進頁面">載入圖片</button>
+          <input id="fileInput" type="file" accept="image/*" hidden />
+          <button id="recBtn" class="txt rec" title="空白鍵">錄製中</button>
+          <button id="clearBtn" class="txt" title="C">清除</button>
+          <span class="field">
+            <button id="pngBtn" class="txt" title="S" disabled>匯出 PNG</button>
+            <button id="jpgBtn" class="txt" disabled>JPEG</button>
+          </span>
+          <span class="dim keys">空白鍵 暫停</span>
+        </span>
+      </footer>
+    </div>
   </body>
 </html>

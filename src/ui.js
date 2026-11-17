@@ -1,8 +1,10 @@
-// Side panel, keyboard shortcuts, file loading and export.
+// The colophon (settings and actions as words), captions, keyboard shortcuts,
+// file loading and export.
 import { state, resetOutput, setSource } from "./main.js";
 import { loadImageSource } from "./source.js";
 import { isTextEntry } from "./keys.js";
 import { smoothingToK } from "./interpreter.js";
+import { makeScrub } from "./scrub.js";
 
 const $ = (id) => document.getElementById(id);
 let errorMessage = "";
@@ -41,31 +43,29 @@ function setRecording(on) {
   state.recording = on;
   const b = $("recBtn");
   b.textContent = on ? "錄製中" : "已暫停";
-  b.classList.toggle("primary", on);
+  b.classList.toggle("on", on);
 }
 
 function setPortrait(portrait) {
   if (portrait === state.portrait) return;
   state.portrait = portrait;
-  $("portraitBtn").classList.toggle("active", portrait);
-  $("landscapeBtn").classList.toggle("active", !portrait);
+  $("portraitBtn").classList.toggle("on", portrait);
+  $("landscapeBtn").classList.toggle("on", !portrait);
   resetOutput();
   $("sizeValue").textContent = `${state.output.width} × ${state.output.height}`;
 }
 
-function setDirection(dir) {
-  if (dir === state.direction) return;
-  state.direction = dir;
-  for (const b of document.querySelectorAll(".btn.dir")) {
-    b.classList.toggle("active", b.dataset.dir === dir);
-  }
-  resetOutput();
-}
+const setText = (el, text) => {
+  if (el.textContent !== text) el.textContent = text;
+};
 
 function tick() {
   const o = state.output;
   const pct = Math.round((100 * o.pos) / o.travel);
-  $("statusLine").textContent = `${errorMessage || state.message}　${pct}%`;
+  const srcNote = errorMessage || state.sourceNote;
+  setText($("sourceNote"), srcNote ? `。${srcNote}` : "");
+  setText($("outputNote"), `${state.outputNote} ${pct}%`);
+  $("outputNote").classList.toggle("live", state.live);
   $("pngBtn").disabled = o.pos === 0;
   $("jpgBtn").disabled = o.pos === 0;
   requestAnimationFrame(tick);
@@ -85,19 +85,26 @@ export function initUI() {
 
   $("portraitBtn").onclick = () => setPortrait(true);
   $("landscapeBtn").onclick = () => setPortrait(false);
-  for (const b of document.querySelectorAll(".btn.dir")) {
-    b.onclick = () => setDirection(b.dataset.dir);
-  }
 
-  $("thickSlider").oninput = (e) => {
-    state.thickness = +e.target.value;
-    $("thickValue").textContent = `${state.thickness} px`;
-  };
-  $("smoothSlider").oninput = (e) => {
-    state.smoothing = smoothingToK(+e.target.value);
-    $("smoothValue").textContent = `${e.target.value}%`;
-  };
+  makeScrub($("thick"), {
+    min: 1,
+    max: 40,
+    value: state.thickness,
+    pxPerStep: 6,
+    format: (v) => `${v} px`,
+    onChange: (v) => (state.thickness = v),
+  });
+  makeScrub($("smooth"), {
+    min: 0,
+    max: 95,
+    value: 65,
+    pxPerStep: 2,
+    format: (v) => `${v}%`,
+    onChange: (v) => (state.smoothing = smoothingToK(v)),
+  });
+  state.smoothing = smoothingToK(65);
 
+  setRecording(state.recording);
   $("recBtn").onclick = () => setRecording(!state.recording);
   $("clearBtn").onclick = () => state.output.clear();
   $("pngBtn").onclick = () => exportImage("image/png");
@@ -116,7 +123,7 @@ export function initUI() {
     }
   });
 
-  // after a button click, keep Space from re-triggering it
+  // after a click, keep Space from re-triggering the button
   for (const b of document.querySelectorAll("button")) {
     b.addEventListener("mouseup", () => b.blur());
   }

@@ -30,11 +30,12 @@ export function containRect(boxW, boxH, aspect) {
   return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h };
 }
 
-/** Source preview in the left column, output preview in the right column. */
-export function layoutStage(stageW, stageH, srcAspect, outAspect, gap = 16) {
-  const colW = Math.max(0, (stageW - gap) / 2);
-  const src = containRect(colW, stageH, srcAspect);
-  const out = containRect(colW, stageH, outAspect);
-  out.x += colW + gap;
-  return { src, out };
+/**
+ * Size of an image plate of the given aspect (w/h) that fits a box, where the
+ * plate needs `extraW` / `extraH` of room around the image (borders, slot).
+ * Returns the image size only.
+ */
+export function fitPlate(boxW, boxH, aspect, extraW = 0, extraH = 0) {
+  const w = Math.max(1, Math.min(boxW - extraW, (boxH - extraH) * aspect));
+  return { w, h: w / aspect };
 }

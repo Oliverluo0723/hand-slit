@@ -1,33 +1,38 @@
-// Draws the stage with p5: source preview, slit, hand points and camera
-// thumbnail. The output is a DOM "print" sliding out of a slot cut into the
-// table (see style.css .tray). Also converts screen → source coords.
-import { layoutStage, mapCameraToSource } from "./geometry.js";
+// Draws plate 1 with p5 (source, hand points, slit) and lays out plate 2: the
+// output is a DOM "print" sliding out of a slot cut into the page (see
+// style.css .tray). Captions sit right under each image. Also converts
+// screen → source coords.
+import { fitPlate, mapCameraToSource } from "./geometry.js";
 
-const PAD = 24;        // stage padding
+const BLEED = 28;      // canvas reaches past the image so slit ends stay visible
 const MARGIN = 8;      // white border of the print, css px
 const SLOT_H = 9;      // height of the slot opening
 const SLOT_GAP = 14;   // room above the print for the slot
 const SLOT_OVER = 16;  // slot reaches this far past each side of the paper
+const CAP_GAP = 10;    // image → caption
+const CAP_ROOM = 48;   // room reserved under each plate for its caption
 const RED = "#ff2828";
 const IDLE = "#777";
+const narrow = window.matchMedia("(max-width: 760px)");
+const px = (n) => `${Math.round(n)}px`;
 
-/** DOM layer above the p5 canvas: slot + sheet. Pointer events pass through. */
+/** DOM layer inside plate 2: slot + sheet. Pointer events pass through. */
 function createTray(parent) {
   const tray = document.createElement("div");
   tray.className = "tray";
   tray.innerHTML = `
+    <div class="footprint"></div>
     <div class="slot-halo"></div>
     <div class="slot"><div class="inhole"></div></div>
     <div class="sheet">
       <div class="print"></div>
       <div class="grain"></div><div class="light"></div><div class="occl"></div>
     </div>`;
-  parent.appendChild(tray);
+  parent.prepend(tray);
   const q = (s) => tray.querySelector(s);
-  const els = { halo: q(".slot-halo"), slot: q(".slot"), inhole: q(".inhole"), sheet: q(".sheet"), print: q(".print") };
-  const px = (n) => `${Math.round(n)}px`;
+  const els = { halo: q(".slot-halo"), slot: q(".slot"), inhole: q(".inhole"), sheet: q(".sheet"), print: q(".print"), footprint: q(".footprint") };
 
-  /** r: on-screen rect of the full image. The newest row sits at the slot. */
+  /** r: rect of the full image inside the plate. The newest row sits at the slot. */
   function update(r, output) {
     const sheetW = r.w + MARGIN * 2;
     const sheetTop = r.y - MARGIN;
@@ -39,6 +44,7 @@ function createTray(parent) {
     Object.assign(els.halo.style, { left: px(r.x - MARGIN - SLOT_OVER - 14), top: px(slotTop - 10), width: px(sheetW + SLOT_OVER * 2 + 28), height: px(SLOT_H + 20) });
     Object.assign(els.inhole.style, { left: px(SLOT_OVER), width: px(sheetW), opacity: output.pos > 0 ? 1 : 0 });
     Object.assign(els.sheet.style, { left: px(r.x - MARGIN), top: px(sheetTop), width: px(sheetW), height: px(sheetH) });
+    Object.assign(els.footprint.style, { left: px(r.x - MARGIN), top: px(sheetTop), width: px(sheetW), height: px(r.h + MARGIN * 2) });
 
     if (els.print.firstChild !== output.canvas) els.print.replaceChildren(output.canvas);
     Object.assign(output.canvas.style, { left: px(MARGIN), bottom: px(MARGIN), width: px(r.w), height: px(r.h) });
@@ -47,42 +53,60 @@ function createTray(parent) {
   return { update };
 }
 
+/**
+ * Fit an image of `aspect` into a plate. On wide screens the grid gives the
+ * plate its size; on narrow screens the plate takes its height from the image.
+ */
+function fitInto(plate, aspect, extraW, extraH) {
+  const W = plate.clientWidth;
+  if (narrow.matches) {
+    const fit = fitPlate(W, Math.max(240, window.innerHeight * 0.72), aspect, extraW, extraH);
+    const h = px(fit.h + extraH + CAP_ROOM);
+    if (plate.style.height !== h) plate.style.height = h;
+    return fit;
+  }
+  if (plate.style.height) plate.style.height = "";
+  return fitPlate(W, plate.clientHeight - CAP_ROOM, aspect, extraW, extraH);
+}
+
 export function createView(p) {
-  let last = null;     // last layout, for toSource
-  const tray = createTray(p.canvas.parentElement);
+  const srcPlate = document.getElementById("figSource");
+  const outPlate = document.getElementById("figOutput");
+  const srcCaption = srcPlate.querySelector("figcaption");
+  const outCaption = outPlate.querySelector("figcaption");
+  const tray = createTray(outPlate);
+  let img = null;      // image rect inside the p5 canvas, for drawing and toSource
 
   function layout(source, output) {
-    const extra = SLOT_GAP + MARGIN * 2;   // slot + paper border above/below the image
-    const inner = layoutStage(
-      p.width - PAD * 2,
-      p.height - PAD * 2 - extra,
-      source.width / source.height,
-      output.width / output.height,
-    );
-    inner.src.x += PAD;
-    inner.src.y += PAD + extra / 2;
-    inner.out.x += PAD;
-    inner.out.y += PAD + SLOT_GAP + MARGIN;
-    return inner;
+    // plate 1: the canvas is the image plus a bleed on every side
+    const s = fitInto(srcPlate, source.width / source.height, 0, 0);
+    const cw = Math.round(s.w + BLEED * 2);
+    const ch = Math.round(s.h + BLEED * 2);
+    if (p.width !== cw || p.height !== ch) {
+      p.resizeCanvas(cw, ch);
+      Object.assign(p.canvas.style, { left: px(-BLEED), top: px(-BLEED) });
+    }
+    img = { x: BLEED, y: BLEED, w: s.w, h: s.h };
+    srcCaption.style.top = px(s.h + CAP_GAP);
+
+    // plate 2: slot, then the print with its white border
+    const o = fitInto(outPlate, output.width / output.height, MARGIN * 2, SLOT_GAP + MARGIN * 2);
+    tray.update({ x: MARGIN, y: SLOT_GAP + MARGIN, w: o.w, h: o.h }, output);
+    outCaption.style.top = px(SLOT_GAP + MARGIN * 2 + o.h + CAP_GAP);
   }
 
   function draw({ source, output, slit, hands, tracker, live, pinched }) {
-    const L = (last = layout(source, output));
+    layout(source, output);
     const ctx = p.drawingContext;
-    const toPx = (pt) => [L.src.x + pt.x * L.src.w, L.src.y + pt.y * L.src.h];
+    const toPx = (pt) => [img.x + pt.x * img.w, img.y + pt.y * img.h];
 
-    p.clear();   // the table surface is the stage's CSS background
+    p.clear();
+    ctx.drawImage(source.canvas, img.x, img.y, img.w, img.h);
 
-    // source preview
-    ctx.drawImage(source.canvas, L.src.x, L.src.y, L.src.w, L.src.h);
-
-    // output: print sliding out of the slot
-    tray.update(L.out, output);
-
-    // hand landmarks, clipped to the source preview
+    // hand landmarks, clipped to the image
     ctx.save();
     ctx.beginPath();
-    ctx.rect(L.src.x, L.src.y, L.src.w, L.src.h);
+    ctx.rect(img.x, img.y, img.w, img.h);
     ctx.clip();
     p.noStroke();
     p.fill(255, 255, 255, 200);
@@ -118,7 +142,7 @@ export function createView(p) {
     drawThumb(tracker, hands);
   }
 
-  // camera thumbnail lives in the side panel so it never covers the previews
+  // a small camera view at the foot of the left column
   function drawThumb(tracker, hands) {
     const el = document.getElementById("camThumb");
     if (!el) return;
@@ -136,21 +160,21 @@ export function createView(p) {
     for (const h of hands) {
       for (const k of h.landmarks) {
         g.beginPath();
-        g.arc((1 - k.x) * W, k.y * H, 3, 0, Math.PI * 2);
+        g.arc((1 - k.x) * W, k.y * H, 2.5, 0, Math.PI * 2);
         g.fill();
       }
     }
   }
 
-  /** Window coords → source-normalized. null when outside the preview, unless unclamped. */
+  /** Window coords → source-normalized. null when outside the image, unless unclamped. */
   function toSource(clientX, clientY, { unclamped = false } = {}) {
-    if (!last) return null;
+    if (!img) return null;
     const box = p.canvas.getBoundingClientRect();
-    const x = (clientX - box.left - last.src.x) / last.src.w;
-    const y = (clientY - box.top - last.src.y) / last.src.h;
+    const x = (clientX - box.left - img.x) / img.w;
+    const y = (clientY - box.top - img.y) / img.h;
     if (!unclamped && (x < 0 || x > 1 || y < 0 || y > 1)) return null;
     return { x, y };
   }
 
-  return { layout: () => last, draw, toSource };
+  return { draw, toSource };
 }

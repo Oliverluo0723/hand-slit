@@ -19,7 +19,9 @@ export const state = {
   portrait: true,
   source: null,
   output: null,
-  message: "",
+  sourceNote: "",    // under plate 1: tracking status
+  outputNote: "",    // under plate 2: recording status
+  live: false,       // a strip was written this frame
 };
 
 let strip = new Uint8ClampedArray(0);
@@ -40,23 +42,25 @@ const smoother = createSmoother();
 const interpreter = createInterpreter();
 window.handSlit = { state, tracker };   // for debugging in the console
 
-function statusMessage(slit, engaged) {
-  if (state.output.full) return "成品已滿";
-  if (tracker.status === "no-camera") return "沒有鏡頭，可用滑鼠拉線";
+function sourceNote() {
+  if (tracker.status === "no-camera") return "沒有鏡頭，用滑鼠在圖上拖曳";
   if (tracker.status === "loading") return "載入手部模型中…";
-  if (tracker.status === "error") return "手部追蹤無法啟動，可用滑鼠拉線";
+  if (tracker.status === "error") return "手部追蹤無法啟動，用滑鼠在圖上拖曳";
+  return "";
+}
+
+function outputNote(slit, engaged) {
+  if (state.output.full) return "已滿";
   if (!state.recording) return "已暫停";
-  if (slit && !engaged) return "捏住雙手開始掃描";
+  if (slit && !engaged) return "捏住雙手開始";
   return slit ? "掃描中" : "等待掃描線";
 }
 
 new p5((p) => {
   let view;
   let pointer;
-  const stage = document.getElementById("stage");
-
   p.setup = () => {
-    p.createCanvas(stage.clientWidth, stage.clientHeight).parent(stage);
+    p.createCanvas(1, 1).parent(document.getElementById("figSource"));
     setSource(createTestSource());
     view = createView(p);
     pointer = createPointer(p.canvas, view.toSource);
@@ -64,8 +68,6 @@ new p5((p) => {
     tracker.start();
     window.dispatchEvent(new Event("handslit:ready"));
   };
-
-  p.windowResized = () => p.resizeCanvas(stage.clientWidth, stage.clientHeight);
 
   p.draw = () => {
     const hands = tracker.getHands();
@@ -78,7 +80,9 @@ new p5((p) => {
       state.output.write(strip, state.thickness);
     }
 
-    state.message = statusMessage(slit, engaged);
-    view.draw({ source: state.source, output: state.output, slit, hands, tracker, live: Boolean(recordingNow), pinched });
+    state.live = Boolean(recordingNow);
+    state.sourceNote = sourceNote();
+    state.outputNote = outputNote(slit, engaged);
+    view.draw({ source: state.source, output: state.output, slit, hands, tracker, live: state.live, pinched });
   };
 });
