@@ -76,7 +76,7 @@ export function createSmoother() {
  * Stateful: remembers each hand's pinch (hysteresis), keyed by screen side.
  * update() → {slit, engaged, pinched, commands}
  *   engaged: whether this frame should be recorded
- *   pinched: [aPinched, bPinched] in two-hand mode, otherwise null
+ *   pinched: [aPinched, bPinched] with hands (one hand: both false), null for the pointer
  */
 export function createInterpreter() {
   let held = [false, false];
@@ -99,8 +99,9 @@ export function createInterpreter() {
           commands: [],
         };
       }
+      // one hand: show where the line is, but only two pinching hands record
       if (hands.length === 1) {
-        return { slit: slitFromHands(hands, mapOpts), engaged: true, pinched: null, commands: [] };
+        return { slit: slitFromHands(hands, mapOpts), engaged: false, pinched: [false, false], commands: [] };
       }
       return { slit: pointerSlit, engaged: pointerSlit !== null, pinched: null, commands: [] };
     },

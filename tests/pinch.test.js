@@ -62,11 +62,14 @@ test("losing a hand resets pinch state", () => {
   assert.equal(r.engaged, false);
 });
 
-test("one hand always records; pointer records while pressed; nothing → no slit", () => {
+test("one hand shows the slit but never records; pointer records while pressed; nothing → no slit", () => {
   const it = createInterpreter();
-  const one = it.update({ hands: [hand(0.5, 0.9)], pointerSlit: null }, RAW);
-  assert.equal(one.engaged, true);
-  assert.equal(one.pinched, null);
+  for (const h of [hand(0.5, 0.9), hand(0.5, 0.2)]) {   // open and pinched
+    const one = it.update({ hands: [h], pointerSlit: null }, RAW);
+    assert.ok(one.slit);
+    assert.equal(one.engaged, false);
+    assert.deepEqual(one.pinched, [false, false]);
+  }
   const ptr = { a: { x: 0, y: 0 }, b: { x: 1, y: 1 } };
   assert.deepEqual(it.update({ hands: [], pointerSlit: ptr }, RAW), { slit: ptr, engaged: true, pinched: null, commands: [] });
   assert.deepEqual(it.update({ hands: [], pointerSlit: null }, RAW), { slit: null, engaged: false, pinched: null, commands: [] });
