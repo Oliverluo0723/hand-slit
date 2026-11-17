@@ -7,6 +7,13 @@ const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSI
 const HAND_MODEL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
+const STALE_MS = 300;
+
+/** Drop hands when no detection has completed recently (stalled or lost camera). */
+export function freshHands(hands, lastDetectAt, now, staleMs = STALE_MS) {
+  return now - lastDetectAt > staleMs ? [] : hands;
+}
+
 export function createTracker() {
   const video = document.createElement("video");
   video.muted = true;
@@ -14,6 +21,7 @@ export function createTracker() {
 
   let landmarker = null;
   let hands = [];
+  let lastDetectAt = 0;
   let lastVideoTime = -1;
   let count = 0;
   let windowStart = performance.now();
@@ -22,7 +30,7 @@ export function createTracker() {
     status: "loading",
     video,
     fps: 0,
-    getHands: () => hands,
+    getHands: () => freshHands(hands, lastDetectAt, performance.now()),
     start,
   };
 
@@ -33,6 +41,10 @@ export function createTracker() {
         audio: false,
       });
       await video.play();
+      video.srcObject.getVideoTracks()[0]?.addEventListener("ended", () => {
+        hands = [];
+        tracker.status = "no-camera";
+      });
     } catch (err) {
       tracker.status = "no-camera";
       return;
@@ -66,13 +78,18 @@ export function createTracker() {
   function loop() {
     if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
       lastVideoTime = video.currentTime;
-      const res = landmarker.detectForVideo(video, performance.now());
-      const labels = res.handedness ?? res.handednesses ?? [];
-      hands = (res.landmarks ?? []).map((lm, i) => ({
-        handedness: labels[i]?.[0]?.categoryName ?? "Right",
-        landmarks: lm.map((p) => ({ x: p.x, y: p.y })),
-      }));
-      count++;
+      try {
+        const res = landmarker.detectForVideo(video, performance.now());
+        const labels = res.handedness ?? res.handednesses ?? [];
+        hands = (res.landmarks ?? []).map((lm, i) => ({
+          handedness: labels[i]?.[0]?.categoryName ?? "Right",
+          landmarks: lm.map((p) => ({ x: p.x, y: p.y })),
+        }));
+        lastDetectAt = performance.now();
+        count++;
+      } catch (err) {
+        console.warn("hand detection failed on a frame", err);
+      }
     }
     const now = performance.now();
     if (now - windowStart >= 1000) {

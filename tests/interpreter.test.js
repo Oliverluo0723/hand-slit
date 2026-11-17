@@ -21,7 +21,7 @@ test("one hand: thumb tip to index tip", () => {
   nearSlit(s, { a: { x: 0.1, y: 0.2 }, b: { x: 0.3, y: 0.4 } });
 });
 
-test("two hands: index tips, Left hand is always endpoint a", () => {
+test("two hands: index tips, ordered left to right", () => {
   const L = hand("Left", { x: 0, y: 0 }, { x: 0.2, y: 0.2 });
   const R = hand("Right", { x: 0, y: 0 }, { x: 0.8, y: 0.8 });
   const expected = { a: { x: 0.2, y: 0.2 }, b: { x: 0.8, y: 0.8 } };

@@ -1,13 +1,23 @@
 // Mouse / touch → slit. One pointer: anchor at press point, other end follows.
 // Two pointers (touch): each end follows one finger.
 
+/** Mouse: only the main button. Touch / pen: any contact. */
+export function isPrimaryPress(e) {
+  return e.pointerType !== "mouse" || e.button === 0;
+}
+
+/** A mouse move with no button held means we missed the pointerup (e.g. context menu). */
+export function isReleasedMove(e) {
+  return e.pointerType === "mouse" && e.buttons === 0;
+}
+
 export function createPointer(el, toSource) {
   el.style.touchAction = "none";
   /** pointerId → {start: Point, cur: Point}, in press order */
   const active = new Map();
 
   el.addEventListener("pointerdown", (e) => {
-    if (active.size >= 2) return;
+    if (active.size >= 2 || !isPrimaryPress(e)) return;
     const pt = toSource(e.clientX, e.clientY);
     if (!pt) return;
     el.setPointerCapture(e.pointerId);
@@ -17,6 +27,10 @@ export function createPointer(el, toSource) {
   el.addEventListener("pointermove", (e) => {
     const rec = active.get(e.pointerId);
     if (!rec) return;
+    if (isReleasedMove(e)) {
+      active.delete(e.pointerId);
+      return;
+    }
     rec.cur = toSource(e.clientX, e.clientY, { unclamped: true }) ?? rec.cur;
   });
 

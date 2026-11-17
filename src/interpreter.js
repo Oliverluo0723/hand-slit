@@ -12,9 +12,17 @@ export function slitFromHands(hands, mapOpts) {
     const lm = hands[0].landmarks;
     return { a: map(lm[THUMB_TIP]), b: map(lm[INDEX_TIP]) };
   }
-  let [h1, h2] = hands;
-  if (h1.handedness !== "Left" && h2.handedness === "Left") [h1, h2] = [h2, h1];
-  return { a: map(h1.landmarks[INDEX_TIP]), b: map(h2.landmarks[INDEX_TIP]) };
+  // Order by on-screen position, not by MediaPipe's handedness label: labels
+  // flicker and can coincide, which would swap the ends between frames.
+  let p = map(hands[0].landmarks[INDEX_TIP]);
+  let q = map(hands[1].landmarks[INDEX_TIP]);
+  if (q.x < p.x) [p, q] = [q, p];
+  return { a: p, b: q };
+}
+
+/** Slider "平滑" percent (0 = none) → per-frame lerp factor k. */
+export function smoothingToK(percent) {
+  return 1 - percent / 100;
 }
 
 export function createSmoother() {

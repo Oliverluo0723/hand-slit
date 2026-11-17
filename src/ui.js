@@ -1,6 +1,8 @@
 // Side panel, keyboard shortcuts, file loading and export.
 import { state, resetOutput, setSource } from "./main.js";
 import { loadImageSource } from "./source.js";
+import { isTextEntry } from "./keys.js";
+import { smoothingToK } from "./interpreter.js";
 
 const $ = (id) => document.getElementById(id);
 let errorMessage = "";
@@ -43,6 +45,7 @@ function setRecording(on) {
 }
 
 function setPortrait(portrait) {
+  if (portrait === state.portrait) return;
   state.portrait = portrait;
   $("portraitBtn").classList.toggle("active", portrait);
   $("landscapeBtn").classList.toggle("active", !portrait);
@@ -51,6 +54,7 @@ function setPortrait(portrait) {
 }
 
 function setDirection(dir) {
+  if (dir === state.direction) return;
   state.direction = dir;
   for (const b of document.querySelectorAll(".btn.dir")) {
     b.classList.toggle("active", b.dataset.dir === dir);
@@ -90,7 +94,7 @@ export function initUI() {
     $("thickValue").textContent = `${state.thickness} px`;
   };
   $("smoothSlider").oninput = (e) => {
-    state.smoothing = +e.target.value / 100;
+    state.smoothing = smoothingToK(+e.target.value);
     $("smoothValue").textContent = `${e.target.value}%`;
   };
 
@@ -100,7 +104,7 @@ export function initUI() {
   $("jpgBtn").onclick = () => exportImage("image/jpeg");
 
   window.addEventListener("keydown", (e) => {
-    if (e.target instanceof HTMLInputElement) return;
+    if (isTextEntry(e.target)) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.code === "Space") {
       e.preventDefault();
