@@ -6,6 +6,7 @@ import { sampleLine } from "./scanner.js";
 import { createOutput } from "./output.js";
 import { createTestSource } from "./source.js";
 import { createView } from "./view.js";
+import { initUI } from "./ui.js";
 
 const PORTRAIT = { width: 1790, height: 2560 };
 const LANDSCAPE = { width: 2560, height: 1790 };
@@ -57,6 +58,7 @@ new p5((p) => {
     setSource(createTestSource());
     view = createView(p);
     pointer = createPointer(p.canvas, view.toSource);
+    initUI();
     tracker.start();
     window.dispatchEvent(new Event("handslit:ready"));
   };
