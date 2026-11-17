@@ -57,10 +57,10 @@ function createTray(parent) {
  * Fit an image of `aspect` into a plate. On wide screens the grid gives the
  * plate its size; on narrow screens the plate takes its height from the image.
  */
-function fitInto(plate, aspect, extraW, extraH) {
+function fitInto(plate, aspect, extraW, extraH, narrowShare) {
   const W = plate.clientWidth;
   if (narrow.matches) {
-    const fit = fitPlate(W, Math.max(240, window.innerHeight * 0.72), aspect, extraW, extraH);
+    const fit = fitPlate(W, Math.max(200, window.innerHeight * narrowShare), aspect, extraW, extraH);
     const h = px(fit.h + extraH + CAP_ROOM);
     if (plate.style.height !== h) plate.style.height = h;
     return fit;
@@ -79,7 +79,7 @@ export function createView(p) {
 
   function layout(source, output) {
     // plate 1: the canvas is the image plus a bleed on every side
-    const s = fitInto(srcPlate, source.width / source.height, 0, 0);
+    const s = fitInto(srcPlate, source.width / source.height, 0, 0, 0.42);
     const cw = Math.round(s.w + BLEED * 2);
     const ch = Math.round(s.h + BLEED * 2);
     if (p.width !== cw || p.height !== ch) {
@@ -89,10 +89,11 @@ export function createView(p) {
     img = { x: BLEED, y: BLEED, w: s.w, h: s.h };
     srcCaption.style.top = px(s.h + CAP_GAP);
 
-    // plate 2: slot, then the print with its white border
-    const o = fitInto(outPlate, output.width / output.height, MARGIN * 2, SLOT_GAP + MARGIN * 2);
-    tray.update({ x: MARGIN, y: SLOT_GAP + MARGIN, w: o.w, h: o.h }, output);
-    outCaption.style.top = px(SLOT_GAP + MARGIN * 2 + o.h + CAP_GAP);
+    // plate 2, the subject: slot, then the print with its white border, centred
+    const o = fitInto(outPlate, output.width / output.height, MARGIN * 2, SLOT_GAP + MARGIN * 2, 0.8);
+    const ox = narrow.matches ? 0 : Math.max(0, (outPlate.clientWidth - o.w - MARGIN * 2) / 2);
+    tray.update({ x: ox + MARGIN, y: SLOT_GAP + MARGIN, w: o.w, h: o.h }, output);
+    Object.assign(outCaption.style, { top: px(SLOT_GAP + MARGIN * 2 + o.h + CAP_GAP), left: px(ox) });
   }
 
   function draw({ source, output, slit, hands, tracker, live, pinched }) {

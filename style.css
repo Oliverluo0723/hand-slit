@@ -44,7 +44,7 @@ body::before {
 .page {
   overflow-x: clip;   /* the slot and the canvas bleed may reach past the edge */
   display: grid;
-  grid-template-columns: minmax(150px, 14vw) 1fr 1fr;
+  grid-template-columns: minmax(200px, 19vw) 1fr;
   grid-template-rows: minmax(0, 1fr) auto;
   column-gap: clamp(28px, 4.5vw, 80px);
   row-gap: 20px;
@@ -71,23 +71,23 @@ body::before {
 }
 
 .how {
-  margin: 0;
+  margin: 0 0 28px;
   max-width: 13em;
   text-align: justify;
 }
 
-/* camera view and the play button sit at the foot of the left column */
+/* the play button and a small camera view sit at the foot of the left column */
 .foot {
-  margin-top: auto;
+  flex: none;
   display: flex;
-  flex-direction: column;
-  gap: 18px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 #camThumb {
   display: block;
-  width: 100%;
-  max-width: 160px;
+  width: 96px;
   height: auto;
   background: #1b1b1b;
 }
@@ -105,13 +105,14 @@ body::before {
   min-height: 0;
 }
 
+/* the source is small, in the left column; the output is the subject */
 #figSource {
-  grid-column: 2;
-  grid-row: 1;
+  flex: 1 1 auto;
+  margin-bottom: 12px;
 }
 
 #figOutput {
-  grid-column: 3;
+  grid-column: 2;
   grid-row: 1;
 }
 
@@ -404,7 +405,6 @@ figcaption b {
   }
 
   .intro,
-  #figSource,
   #figOutput,
   .colophon {
     grid-column: 1;
@@ -415,12 +415,8 @@ figcaption b {
     padding-bottom: 112px;   /* room for the floating play button */
   }
 
-  .foot {
-    margin-top: 16px;
-  }
-
-  #camThumb {
-    max-width: 120px;
+  #figSource {
+    flex: none;
   }
 
   /* the play button floats at the bottom-left while the page scrolls */

@@ -21,8 +21,10 @@
       <header class="intro">
         <h1>HAND SLIT</h1>
         <p class="how">舉起雙手捏住，兩手之間就是掃描線。滑鼠也可以拖曳。</p>
+        <figure id="figSource" class="plate">
+          <figcaption><b>圖 1</b>　素材<span id="sourceNote"></span></figcaption>
+        </figure>
         <div class="foot">
-          <canvas id="camThumb" width="240" height="180" hidden></canvas>
           <div class="playrow">
             <button id="recBtn" class="play on" aria-label="暫停" title="空白鍵">
               <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -33,12 +35,9 @@
             </button>
             <span class="playlabel"><span id="recLabel">錄製中</span><span class="dim">空白鍵</span></span>
           </div>
+          <canvas id="camThumb" width="240" height="180" hidden></canvas>
         </div>
       </header>
-
-      <figure id="figSource" class="plate">
-        <figcaption><b>圖 1</b>　素材<span id="sourceNote"></span></figcaption>
-      </figure>
 
       <figure id="figOutput" class="plate">
         <figcaption>
