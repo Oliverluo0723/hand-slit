@@ -45,6 +45,7 @@ function trackingNotice() {
   if (tracker.status === "no-camera") return "沒有鏡頭，用滑鼠拖曳";
   if (tracker.status === "loading") return "載入手部模型中…";
   if (tracker.status === "error") return "手部追蹤無法啟動，用滑鼠拖曳";
+  if (tracker.status === "off") return "鏡頭已關閉，用滑鼠拖曳";
   return "";
 }
 
@@ -56,8 +57,7 @@ new p5((p) => {
     setSource(createTestSource());
     view = createView(p);
     pointer = createPointer(p.canvas, view.toSource);
-    initUI();
-    tracker.start();
+    initUI(tracker);
     window.dispatchEvent(new Event("handslit:ready"));
   };
 

@@ -26,56 +26,95 @@ export function createTracker() {
   let count = 0;
   let windowStart = performance.now();
 
+  let run = 0;          // bumps on every start/stop so a stale start gives up
+  let looping = false;
+
   const tracker = {
-    status: "loading",
+    status: "loading",   // loading | ready | no-camera | error | off
     video,
     fps: 0,
     getHands: () => freshHands(hands, lastDetectAt, performance.now()),
     start,
+    stop,
   };
 
+  function releaseCamera() {
+    const stream = video.srcObject;
+    if (stream) for (const t of stream.getTracks()) t.stop();
+    video.srcObject = null;
+    hands = [];
+  }
+
+  /** Turn the camera off. The hand model stays loaded for the next start. */
+  function stop() {
+    run++;
+    releaseCamera();
+    tracker.status = "off";
+  }
+
   async function start() {
+    const me = ++run;
+    tracker.status = "loading";
     try {
-      video.srcObject = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
         audio: false,
       });
+      if (me !== run) {
+        for (const t of stream.getTracks()) t.stop();
+        return;
+      }
+      video.srcObject = stream;
       await video.play();
-      video.srcObject.getVideoTracks()[0]?.addEventListener("ended", () => {
+      stream.getVideoTracks()[0]?.addEventListener("ended", () => {
+        if (me !== run) return;
         hands = [];
         tracker.status = "no-camera";
       });
     } catch (err) {
-      tracker.status = "no-camera";
+      if (me === run) tracker.status = "no-camera";
       return;
     }
 
-    try {
-      const { FilesetResolver, HandLandmarker } = await import(MP_BUNDLE);
-      const fileset = await FilesetResolver.forVisionTasks(MP_WASM);
-      const create = (delegate) =>
-        HandLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: HAND_MODEL, delegate },
-          runningMode: "VIDEO",
-          numHands: 2,
-        });
+    if (!landmarker) {
       try {
-        landmarker = await create("GPU");
-      } catch (gpuErr) {
-        console.warn("GPU delegate unavailable, falling back to CPU", gpuErr);
-        landmarker = await create("CPU");
+        const { FilesetResolver, HandLandmarker } = await import(MP_BUNDLE);
+        const fileset = await FilesetResolver.forVisionTasks(MP_WASM);
+        const create = (delegate) =>
+          HandLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: HAND_MODEL, delegate },
+            runningMode: "VIDEO",
+            numHands: 2,
+          });
+        let made;
+        try {
+          made = await create("GPU");
+        } catch (gpuErr) {
+          console.warn("GPU delegate unavailable, falling back to CPU", gpuErr);
+          made = await create("CPU");
+        }
+        landmarker ??= made;
+      } catch (err) {
+        console.error("Hand tracking failed to start", err);
+        if (me === run) tracker.status = "error";
+        return;
       }
-    } catch (err) {
-      console.error("Hand tracking failed to start", err);
-      tracker.status = "error";
-      return;
     }
 
+    if (me !== run) return;   // stopped while the model was loading
+    lastVideoTime = -1;
     tracker.status = "ready";
-    requestAnimationFrame(loop);
+    if (!looping) {
+      looping = true;
+      requestAnimationFrame(loop);
+    }
   }
 
   function loop() {
+    if (tracker.status !== "ready") {
+      looping = false;
+      return;
+    }
     if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
       lastVideoTime = video.currentTime;
       try {

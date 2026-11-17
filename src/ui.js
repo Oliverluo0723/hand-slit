@@ -55,6 +55,32 @@ function setPortrait(portrait) {
   resetOutput();
 }
 
+// camera on / off, remembered in this browser (best effort: storage may be blocked)
+const CAMERA_KEY = "handslit.camera";
+
+function cameraWanted() {
+  try {
+    return localStorage.getItem(CAMERA_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function rememberCamera(on) {
+  try {
+    localStorage.setItem(CAMERA_KEY, on ? "on" : "off");
+  } catch {
+    /* not remembered; fine */
+  }
+}
+
+function setCamera(tracker, on) {
+  if (on) tracker.start();
+  else tracker.stop();
+  $("camBtn").textContent = on ? "關閉鏡頭" : "開啟鏡頭";
+  rememberCamera(on);
+}
+
 const setText = (el, text) => {
   if (el.textContent !== text) el.textContent = text;
 };
@@ -68,7 +94,10 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
-export function initUI() {
+export function initUI(tracker) {
+  setCamera(tracker, cameraWanted());
+  $("camBtn").onclick = () => setCamera(tracker, tracker.status === "off");
+
   $("loadBtn").onclick = () => $("fileInput").click();
   $("fileInput").onchange = (e) => {
     loadFile(e.target.files?.[0]);
