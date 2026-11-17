@@ -20,16 +20,17 @@
 - 主軸是手持掃描線（試玩版試過，手感可以）
 - 兩種素材模式：匯入圖片、相機；**第一版先做圖片模式**
 - 之後要加：用手勢決定開始 / 暫停
+- 檔案組織：多個 JS 模組，不用打包工具
+- 追蹤函式庫：直接用 MediaPipe（@mediapipe/tasks-vision 0.10.14）
+- 第一版已完成，見 `README.md`；設計 `docs/superpowers/specs/2026-11-17-hand-slit-design.md`
 
 ## 還沒決定
 
-- **檔案組織**：A 單一 HTML／B 多個 JS 模組不打包（建議）／C Vite + npm + TypeScript
-- **追蹤函式庫**：ml5.js（試玩版用的）或直接用 MediaPipe（建議，因為內建手勢辨識和臉部表情數值；但還沒在本機實測過）
-- 跟 SCAN STUDIO 的關係：同系列續作（沿用外觀）還是獨立新作
+- 跟 SCAN STUDIO 的關係：第一版暫時沿用它的外觀，當作同系列
 - 相機模式的主要玩法
 - 是否加入臉部控制、哪些表情對應哪些參數
 
-## 架構草案（討論中，未定案）
+## 架構（第一版已照此實作）
 
 ```
 素材        追蹤         解讀           掃描          成品
@@ -61,7 +62,7 @@ Source  →  Tracker  →  Interpreter →  Scanner   →  Output
 
 ## 試玩版
 
-位置：`spike/index.html`（用完可丟，不是正式版的基礎）
+位置：`spike/index.html`（用完可丟，不是正式版的基礎；正式版在根目錄）
 
 - p5.js 1.9.4 + ml5.js 1.4.0 的 handPose
 - 啟動：在 `spike/` 內執行 `python3 -m http.server 8765`，開 http://localhost:8765/
