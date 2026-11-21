@@ -2,9 +2,9 @@
 // output is a DOM "print" sliding out of a slot cut into the page (see
 // style.css .tray). Also converts screen → source coords.
 import { fitPlate, mapCameraToSource } from "./geometry.js";
+import { SHEET } from "./output.js";
 
 const BLEED = 28;      // canvas reaches past the image so slit ends stay visible
-const MARGIN = 8;      // white border of the print, css px
 const SLOT_H = 9;      // height of the slot opening
 const SLOT_GAP = 14;   // room above the print for the slot
 const SLOT_OVER = 16;  // slot reaches this far past each side of the paper
@@ -24,30 +24,52 @@ function createTray(parent) {
     <div class="footprint"></div>
     <div class="slot-halo"></div>
     <div class="slot"><div class="inhole"></div></div>
-    <div class="sheet">
+    <div class="sheet" aria-label="帶走這張紙">
       <div class="print"></div>
+      <div class="stamp"></div>
       <div class="grain"></div><div class="light"></div><div class="occl"></div>
     </div>`;
   parent.prepend(tray);
   const q = (s) => tray.querySelector(s);
-  const els = { halo: q(".slot-halo"), slot: q(".slot"), inhole: q(".inhole"), sheet: q(".sheet"), print: q(".print"), footprint: q(".footprint") };
+  const els = { halo: q(".slot-halo"), slot: q(".slot"), inhole: q(".inhole"), sheet: q(".sheet"), print: q(".print"), stamp: q(".stamp"), footprint: q(".footprint") };
 
-  /** r: rect of the full image inside the plate. The newest row sits at the slot. */
-  function update(r, output) {
-    const sheetW = r.w + MARGIN * 2;
-    const sheetTop = r.y - MARGIN;
+  /**
+   * r: rect of the full image inside the plate; m, foot: the sheet's border and
+   * foot in css px. The newest row sits at the slot; the foot leads out.
+   */
+  function update(r, m, foot, output, { stamp, done, leaving }) {
+    const sheetW = r.w + m * 2;
+    const sheetTop = r.y - m;
     const slotTop = sheetTop - SLOT_H + 1;
     const shown = (output.pos / output.travel) * r.h;
-    const sheetH = output.pos > 0 ? MARGIN + shown + (output.full ? MARGIN : 0) : 0;
+    const sheetH = output.pos > 0 ? foot + shown + (output.full ? m : 0) : 0;
 
-    Object.assign(els.slot.style, { left: px(r.x - MARGIN - SLOT_OVER), top: px(slotTop), width: px(sheetW + SLOT_OVER * 2), height: px(SLOT_H) });
-    Object.assign(els.halo.style, { left: px(r.x - MARGIN - SLOT_OVER - 14), top: px(slotTop - 10), width: px(sheetW + SLOT_OVER * 2 + 28), height: px(SLOT_H + 20) });
-    Object.assign(els.inhole.style, { left: px(SLOT_OVER), width: px(sheetW), opacity: output.pos > 0 ? 1 : 0 });
-    Object.assign(els.sheet.style, { left: px(r.x - MARGIN), top: px(sheetTop), width: px(sheetW), height: px(sheetH) });
-    Object.assign(els.footprint.style, { left: px(r.x - MARGIN), top: px(sheetTop), width: px(sheetW), height: px(r.h + MARGIN * 2) });
+    Object.assign(els.slot.style, { left: px(r.x - m - SLOT_OVER), top: px(slotTop), width: px(sheetW + SLOT_OVER * 2), height: px(SLOT_H) });
+    Object.assign(els.halo.style, { left: px(r.x - m - SLOT_OVER - 14), top: px(slotTop - 10), width: px(sheetW + SLOT_OVER * 2 + 28), height: px(SLOT_H + 20) });
+    Object.assign(els.inhole.style, { left: px(SLOT_OVER), width: px(sheetW), opacity: output.pos > 0 && !leaving ? 1 : 0 });
+    Object.assign(els.sheet.style, { left: px(r.x - m), top: px(sheetTop), width: px(sheetW), height: px(sheetH) });
+    Object.assign(els.footprint.style, { left: px(r.x - m), top: px(sheetTop), width: px(sheetW), height: px(r.h + m + foot) });
 
     if (els.print.firstChild !== output.canvas) els.print.replaceChildren(output.canvas);
-    Object.assign(output.canvas.style, { left: px(MARGIN), bottom: px(MARGIN), width: px(r.w), height: px(r.h) });
+    Object.assign(output.canvas.style, { left: px(m), bottom: px(foot), width: px(r.w), height: px(r.h) });
+
+    // the stamp is printed into the foot once the sheet is full
+    Object.assign(els.stamp.style, { left: px(m), height: px(foot), lineHeight: px(foot), fontSize: `${(r.w * SHEET.type).toFixed(1)}px` });
+    const text = done ? stamp : "";
+    if (els.stamp.textContent !== text) els.stamp.textContent = text;
+
+    const takeable = done && !leaving;
+    els.sheet.classList.toggle("done", takeable);
+    els.sheet.classList.toggle("leaving", leaving);
+    if (takeable !== (els.sheet.getAttribute("role") === "button")) {
+      if (takeable) {
+        els.sheet.setAttribute("role", "button");
+        els.sheet.tabIndex = 0;
+      } else {
+        els.sheet.removeAttribute("role");
+        els.sheet.removeAttribute("tabindex");
+      }
+    }
   }
 
   return { update };
@@ -87,7 +109,7 @@ export function createView(p) {
     if (page.style.gridTemplateColumns !== cols) page.style.gridTemplateColumns = cols;
   }
 
-  function layout(source, output) {
+  function layout(source, output, sheetState) {
     sizeSide(source.width / source.height);
     // plate 1: the canvas is the image plus a bleed on every side
     const s = fitInto(srcPlate, source.width / source.height, 0, 0, 0.42);
@@ -99,15 +121,19 @@ export function createView(p) {
     }
     img = { x: BLEED, y: BLEED, w: s.w, h: s.h };
 
-    // plate 2, the subject: slot, then the print with its white border, centred
-    const o = fitInto(outPlate, output.width / output.height, MARGIN * 2, SLOT_GAP + MARGIN * 2, 0.8);
-    const ox = narrow.matches ? 0 : Math.max(0, (outPlate.clientWidth - o.w - MARGIN * 2) / 2);
-    tray.update({ x: ox + MARGIN, y: SLOT_GAP + MARGIN, w: o.w, h: o.h }, output);
-
+    // plate 2, the subject: slot, then the whole sheet (border, image, foot), centred.
+    // Border and foot are shares of the image width, so fit the sheet's own shape.
+    const a = output.width / output.height;
+    const sheetAspect = (1 + 2 * SHEET.margin) / (1 / a + SHEET.margin + SHEET.foot);
+    const fit = fitInto(outPlate, sheetAspect, 0, SLOT_GAP, 0.8);
+    const w = fit.w / (1 + 2 * SHEET.margin);
+    const m = w * SHEET.margin;
+    const ox = narrow.matches ? 0 : Math.max(0, (outPlate.clientWidth - fit.w) / 2);
+    tray.update({ x: ox + m, y: SLOT_GAP + m, w, h: w / a }, m, w * SHEET.foot, output, sheetState);
   }
 
-  function draw({ source, output, slit, hands, tracker, live, pinched }) {
-    layout(source, output);
+  function draw({ source, output, slit, hands, tracker, live, pinched, stamp, done, leaving }) {
+    layout(source, output, { stamp, done, leaving });
     const ctx = p.drawingContext;
     const toPx = (pt) => [img.x + pt.x * img.w, img.y + pt.y * img.h];
 

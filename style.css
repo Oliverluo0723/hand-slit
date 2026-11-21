@@ -1,4 +1,4 @@
-/* HAND SLIT — the page is a catalogue spread: two plates, captions, a colophon. */
+/* HAND SLIT — the page is a catalogue spread: the source, and a print coming out of a slot. */
 
 :root {
   --paper: #fbfaf7;
@@ -42,14 +42,13 @@ body::before {
 }
 
 .page {
-  overflow-x: clip;   /* the slot and the canvas bleed may reach past the edge */
+  overflow: clip;   /* the slot reaches past the sides; a taken sheet slides off the bottom */
   display: grid;
   grid-template-columns: minmax(200px, 19vw) 1fr;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   column-gap: clamp(28px, 4.5vw, 80px);
-  row-gap: 20px;
   height: 100dvh;
-  padding: clamp(28px, 5vh, 56px) clamp(24px, 4vw, 64px) clamp(18px, 3vh, 30px);
+  padding: clamp(28px, 5vh, 56px) clamp(24px, 4vw, 64px);
 }
 
 /* ---- left column ---- */
@@ -71,24 +70,26 @@ body::before {
 }
 
 .how {
-  margin: 0 0 28px;
+  margin: 0;
   max-width: 13em;
   text-align: justify;
 }
 
-/* the play button and a small camera view sit at the foot of the left column */
-.foot {
-  flex: none;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
+/* tracking notices, faint, under the one line of instructions */
+.hint {
+  margin: 0 0 22px;
+  min-height: 1.7em;
+  max-width: 13em;
+  color: var(--faint);
+  font-size: 12px;
 }
 
+/* a small camera view at the foot of the left column, so you can find its frame */
 .cam {
+  flex: none;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 6px;
   font-size: 12px;
 }
@@ -131,40 +132,14 @@ body::before {
   z-index: 1;
 }
 
-/* ---- colophon: every setting and action is a word ---- */
-
-.colophon {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px 32px;
-  padding-top: 10px;
-  border-top: 1px solid var(--ink);
-  font-size: 13px;
-}
-
-.group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 22px;
-}
-
-.field {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
+/* the camera switch is a word */
 .txt {
   padding: 0;
   margin: 0;
   border: 0;
   background: none;
   font: inherit;
-  color: var(--ink);
+  color: var(--grey);
   cursor: pointer;
   text-decoration: underline;
   text-decoration-color: var(--faint);
@@ -172,122 +147,14 @@ body::before {
   text-underline-offset: 4px;
 }
 
-.txt:hover:not(:disabled) {
+.txt:hover {
+  color: var(--ink);
   text-decoration-color: var(--ink);
 }
 
-.txt:disabled {
-  color: var(--faint);
-  text-decoration: none;
-  cursor: default;
-}
-
-/* portrait / landscape: the current one is ink, the other is faint */
-#portraitBtn,
-#landscapeBtn {
-  color: var(--faint);
-  text-decoration: none;
-}
-
-#portraitBtn.on,
-#landscapeBtn.on {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--faint);
-}
-
-/* play / pause: the one big control */
-.playrow {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.play {
-  flex: none;
-  width: 64px;
-  height: 64px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: 50%;
-}
-
-.play svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.play .disc {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 1.5;
-  transition: fill 0.15s, stroke 0.15s;
-}
-
-.play .icon-play {
-  fill: var(--ink);
-}
-
-.play .icon-pause {
-  fill: #fff;
-  display: none;
-}
-
-.play.on .disc {
-  fill: var(--red);
-  stroke: var(--red);
-}
-
-.play.on .icon-play {
-  display: none;
-}
-
-.play.on .icon-pause {
-  display: inline;
-}
-
-.play:hover .disc {
-  stroke-width: 2.5;
-}
-
-.play:focus-visible {
-  outline: 1px solid var(--ink);
-  outline-offset: 4px;
-}
-
-.playlabel {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.5;
-}
-
-.play.on + .playlabel #recLabel {
-  color: var(--red);
-}
-
-/* a number you drag sideways */
-.num {
-  cursor: ew-resize;
-  user-select: none;
-  touch-action: none;
-  font-variant-numeric: tabular-nums;
-  border-bottom: 1px dotted var(--ink);
-  padding: 0 1px;
-  outline: none;
-}
-
-.num:focus-visible,
 .txt:focus-visible {
   outline: 1px solid var(--ink);
   outline-offset: 3px;
-}
-
-.dim {
-  color: var(--faint);
 }
 
 /* ---- output: a print sliding out of a slot cut into the page ---- */
@@ -350,6 +217,39 @@ body::before {
   position: absolute;
 }
 
+/* the day it was finished and how long it took, printed into the foot */
+.sheet .stamp {
+  position: absolute;
+  bottom: 0;
+  white-space: nowrap;
+  color: var(--grey);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* a finished sheet can be taken */
+.sheet.done {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.sheet.done:hover,
+.sheet.done:focus-visible {
+  outline: none;
+  box-shadow:
+    0 1px 1px rgba(70, 60, 45, 0.16),
+    0 3px 4px rgba(70, 60, 45, 0.12),
+    0 8px 12px rgba(70, 60, 45, 0.1),
+    0 18px 28px rgba(70, 60, 45, 0.08);
+}
+
+/* taken: it slides on down and off the page */
+.sheet.leaving {
+  transform: translateY(110vh);
+  transition: transform 0.9s cubic-bezier(0.55, 0, 0.8, 0.2);
+}
+
 .sheet .grain,
 .sheet .light,
 .sheet .occl {
@@ -395,29 +295,12 @@ body::before {
   }
 
   .intro,
-  #figOutput,
-  .colophon {
+  #figOutput {
     grid-column: 1;
     grid-row: auto;
   }
 
-  .page {
-    padding-bottom: 112px;   /* room for the floating play button */
-  }
-
   #figSource {
     flex: none;
-  }
-
-  /* the play button floats at the bottom-left while the page scrolls */
-  .playrow {
-    position: fixed;
-    left: 20px;
-    bottom: 20px;
-    z-index: 20;
-  }
-
-  .playlabel {
-    display: none;
   }
 }

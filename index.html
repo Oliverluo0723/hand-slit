@@ -20,47 +20,16 @@
     <div class="page">
       <header class="intro">
         <h1>HAND SLIT</h1>
-        <p class="how">舉起雙手捏住，兩手之間就是掃描線。滑鼠也可以拖曳。</p>
+        <p id="how" class="how">舉起雙手捏住，兩手之間就是掃描線。滑鼠也可以拖曳。</p>
+        <p id="hint" class="hint" aria-live="polite"></p>
         <figure id="figSource" class="plate"></figure>
-        <div class="foot">
-          <div class="playrow">
-            <button id="recBtn" class="play on" aria-label="暫停" title="空白鍵">
-              <svg viewBox="0 0 64 64" aria-hidden="true">
-                <circle class="disc" cx="32" cy="32" r="31" />
-                <path class="icon-play" d="M26 20 L46 32 L26 44 Z" />
-                <g class="icon-pause"><rect x="23" y="21" width="6" height="22" /><rect x="35" y="21" width="6" height="22" /></g>
-              </svg>
-            </button>
-            <span class="playlabel"><span id="recLabel">錄製中</span><span id="hint" class="dim">空白鍵</span></span>
-          </div>
-          <div class="cam">
-            <canvas id="camThumb" width="240" height="180" hidden></canvas>
-            <button id="camBtn" class="txt">關閉鏡頭</button>
-          </div>
+        <div class="cam">
+          <canvas id="camThumb" width="240" height="180" hidden></canvas>
+          <button id="camBtn" class="txt">關閉鏡頭</button>
         </div>
       </header>
 
       <figure id="figOutput" class="plate"></figure>
-
-      <footer class="colophon">
-        <span class="group">
-          <span class="field">每幀寬度 <span id="thick" class="num" tabindex="0" role="slider" aria-label="每幀寬度"></span></span>
-          <span class="field">平滑 <span id="smooth" class="num" tabindex="0" role="slider" aria-label="平滑"></span></span>
-          <span class="field">
-            <button id="portraitBtn" class="txt on">直向</button>
-            <button id="landscapeBtn" class="txt">橫向</button>
-          </span>
-        </span>
-        <span class="group">
-          <button id="loadBtn" class="txt" title="也可以把圖片檔拖進頁面">載入圖片</button>
-          <input id="fileInput" type="file" accept="image/*" hidden />
-          <button id="clearBtn" class="txt" title="C">清除</button>
-          <span class="field">
-            <button id="pngBtn" class="txt" title="S" disabled>匯出 PNG</button>
-            <button id="jpgBtn" class="txt" disabled>JPEG</button>
-          </span>
-        </span>
-      </footer>
     </div>
   </body>
 </html>

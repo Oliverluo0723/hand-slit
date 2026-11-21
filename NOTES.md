@@ -23,6 +23,7 @@
 - 檔案組織：多個 JS 模組，不用打包工具
 - 追蹤函式庫：直接用 MediaPipe（@mediapipe/tasks-vision 0.10.14）
 - 第一版已完成，見 `README.md`；設計 `docs/superpowers/specs/2026-11-17-hand-slit-design.md`
+- 2026-11-21 改成「一張紙，一次」：圖和參數由作者定，觀眾只有手；不能重來，紙滿印上日期與時長才能拿走。設計 `docs/superpowers/specs/2026-11-21-one-sheet-design.md`
 
 ## 還沒決定
 
@@ -154,7 +155,7 @@ Source  →  Tracker  →  Interpreter →  Scanner   →  Output
 
 ### 本作的定位
 
-前人多半是「縫固定，人在前面動」或「用身體位置影響時間」。本作是「縫握在手裡，可旋轉、拉長」，成品是可匯出的靜態圖，比較接近工具而不是鏡子式裝置。最值得看的是《Liquid Time》（互動手感）和《Video Cubism》（運算邏輯）。
+前人多半是「縫固定，人在前面動」或「用身體位置影響時間」。本作是「縫握在手裡，可旋轉、拉長」，成品是一張不能重來、印著日期與時長的紙。圖和規則由作者決定，觀眾只貢獻手的動作，所以它不是讓人拿去做圖的工具，也不是照出自己的鏡子。最值得看的是《Liquid Time》（互動手感）和《Video Cubism》（運算邏輯）。
 
 ### 關鍵字
 

@@ -3,6 +3,43 @@
 
 const vertical = (direction) => direction === "tb" || direction === "bt";
 
+/**
+ * The finished sheet: a white border around the image and a wider foot at the
+ * bottom that carries the stamp. Sizes are shares of the image width, so the
+ * page and the exported file have the same proportions.
+ */
+export const SHEET = { margin: 0.03, foot: 0.1, type: 0.028 };
+export const STAMP_INK = "#77726b";
+export const STAMP_FONT = '"Noto Sans TC", "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif';
+
+/** Border and foot in pixels for an image `width` pixels wide. */
+export function sheetLayout(width) {
+  return {
+    margin: Math.round(width * SHEET.margin),
+    foot: Math.round(width * SHEET.foot),
+    type: Math.round(width * SHEET.type),
+  };
+}
+
+/** 72 000 ms → "1 分 12 秒". Never less than one second. */
+export function formatDuration(ms) {
+  const total = Math.max(1, Math.round(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const parts = [];
+  if (h) parts.push(`${h} 小時`);
+  if (m) parts.push(`${m} 分`);
+  if (s || parts.length === 0) parts.push(`${s} 秒`);
+  return parts.join(" ");
+}
+
+/** "2026.11.21　1 分 12 秒": the day the sheet was finished and how long it took. */
+export function stampText(date, ms) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}　${formatDuration(ms)}`;
+}
+
 /** Rect the next strip occupies, given `pos` pixels already filled. */
 export function stripRect(direction, width, height, pos, thickness) {
   const travel = vertical(direction) ? height : width;
@@ -36,7 +73,7 @@ export function createOutput({ width, height, direction }) {
     },
     write,
     clear,
-    toBlob,
+    toSheetBlob,
   };
 
   function write(strip, thickness) {
@@ -64,9 +101,30 @@ export function createOutput({ width, height, direction }) {
     out.pos = 0;
   }
 
-  function toBlob(type) {
+  /** The whole sheet as a PNG: border, image, and the stamp in the foot. */
+  async function toSheetBlob(stamp) {
+    const { margin, foot, type } = sheetLayout(width);
+    const sheet = document.createElement("canvas");
+    sheet.width = width + margin * 2;
+    sheet.height = height + margin + foot;
+    const g = sheet.getContext("2d");
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, sheet.width, sheet.height);
+    g.drawImage(canvas, margin, margin);
+
+    const font = `400 ${type}px ${STAMP_FONT}`;
+    try {
+      await document.fonts.load(font, stamp);
+    } catch {
+      /* falls back to a system font */
+    }
+    g.font = font;
+    g.fillStyle = STAMP_INK;
+    g.textBaseline = "middle";
+    g.fillText(stamp, margin, height + margin + foot / 2);
+
     return new Promise((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("匯出失敗"))), type, 0.92),
+      sheet.toBlob((b) => (b ? resolve(b) : reject(new Error("匯出失敗"))), "image/png"),
     );
   }
 

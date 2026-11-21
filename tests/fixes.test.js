@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { freshHands } from "../src/tracker.js";
 import { isPrimaryPress, isReleasedMove } from "../src/pointer.js";
-import { isTextEntry } from "../src/keys.js";
 import { slitFromHands, smoothingToK } from "../src/interpreter.js";
 
 // I1
@@ -10,15 +9,6 @@ test("hands older than 300 ms are dropped", () => {
   const hands = [{ handedness: "Left", landmarks: [] }];
   assert.equal(freshHands(hands, 1000, 1200), hands);
   assert.deepEqual(freshHands(hands, 1000, 1301), []);
-});
-
-// I2
-test("only text-like inputs block shortcuts; sliders do not", () => {
-  assert.equal(isTextEntry({ tagName: "INPUT", type: "range" }), false);
-  assert.equal(isTextEntry({ tagName: "INPUT", type: "text" }), true);
-  assert.equal(isTextEntry({ tagName: "TEXTAREA" }), true);
-  assert.equal(isTextEntry({ tagName: "BUTTON" }), false);
-  assert.equal(isTextEntry(null), false);
 });
 
 // I3
