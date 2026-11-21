@@ -29,16 +29,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* a faint paper tooth over the whole page */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  opacity: 0.09;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+/* the page texture: 1px dots on a 3px grid, scattered like an ordered dither.
+   It sits behind everything, so the images themselves stay clean. */
+body {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' shape-rendering='crispEdges'><g fill='%231a1917' fill-opacity='0.17'><rect x='0' y='0' width='1' height='1'/><rect x='6' y='0' width='1' height='1'/><rect x='12' y='0' width='1' height='1'/><rect x='18' y='0' width='1' height='1'/><rect x='27' y='0' width='1' height='1'/><rect x='30' y='0' width='1' height='1'/><rect x='36' y='0' width='1' height='1'/><rect x='42' y='0' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='9' y='3' width='1' height='1'/><rect x='36' y='3' width='1' height='1'/><rect x='45' y='3' width='1' height='1'/><rect x='0' y='6' width='1' height='1'/><rect x='6' y='6' width='1' height='1'/><rect x='18' y='6' width='1' height='1'/><rect x='24' y='6' width='1' height='1'/><rect x='36' y='6' width='1' height='1'/><rect x='42' y='6' width='1' height='1'/><rect x='15' y='9' width='1' height='1'/><rect x='33' y='9' width='1' height='1'/><rect x='39' y='9' width='1' height='1'/><rect x='45' y='9' width='1' height='1'/><rect x='18' y='12' width='1' height='1'/><rect x='24' y='12' width='1' height='1'/><rect x='30' y='12' width='1' height='1'/><rect x='39' y='12' width='1' height='1'/><rect x='15' y='15' width='1' height='1'/><rect x='39' y='15' width='1' height='1'/><rect x='3' y='18' width='1' height='1'/><rect x='6' y='18' width='1' height='1'/><rect x='18' y='18' width='1' height='1'/><rect x='24' y='18' width='1' height='1'/><rect x='30' y='18' width='1' height='1'/><rect x='39' y='18' width='1' height='1'/><rect x='42' y='18' width='1' height='1'/><rect x='3' y='21' width='1' height='1'/><rect x='15' y='21' width='1' height='1'/><rect x='18' y='21' width='1' height='1'/><rect x='27' y='21' width='1' height='1'/><rect x='39' y='21' width='1' height='1'/><rect x='0' y='24' width='1' height='1'/><rect x='3' y='24' width='1' height='1'/><rect x='6' y='24' width='1' height='1'/><rect x='12' y='24' width='1' height='1'/><rect x='21' y='24' width='1' height='1'/><rect x='30' y='24' width='1' height='1'/><rect x='36' y='24' width='1' height='1'/><rect x='39' y='24' width='1' height='1'/><rect x='3' y='27' width='1' height='1'/><rect x='9' y='27' width='1' height='1'/><rect x='15' y='27' width='1' height='1'/><rect x='33' y='27' width='1' height='1'/><rect x='0' y='30' width='1' height='1'/><rect x='6' y='30' width='1' height='1'/><rect x='9' y='30' width='1' height='1'/><rect x='18' y='30' width='1' height='1'/><rect x='21' y='30' width='1' height='1'/><rect x='24' y='30' width='1' height='1'/><rect x='27' y='30' width='1' height='1'/><rect x='30' y='30' width='1' height='1'/><rect x='3' y='33' width='1' height='1'/><rect x='9' y='33' width='1' height='1'/><rect x='39' y='33' width='1' height='1'/><rect x='12' y='36' width='1' height='1'/><rect x='18' y='36' width='1' height='1'/><rect x='30' y='36' width='1' height='1'/><rect x='36' y='36' width='1' height='1'/><rect x='15' y='39' width='1' height='1'/><rect x='33' y='39' width='1' height='1'/><rect x='39' y='39' width='1' height='1'/><rect x='45' y='39' width='1' height='1'/><rect x='3' y='42' width='1' height='1'/><rect x='6' y='42' width='1' height='1'/><rect x='21' y='42' width='1' height='1'/><rect x='45' y='42' width='1' height='1'/><rect x='6' y='45' width='1' height='1'/><rect x='15' y='45' width='1' height='1'/><rect x='30' y='45' width='1' height='1'/><rect x='39' y='45' width='1' height='1'/><rect x='45' y='45' width='1' height='1'/></g></svg>");
+  background-size: 48px 48px;
 }
 
 .page {
