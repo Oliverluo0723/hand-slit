@@ -5,7 +5,7 @@ import { createPointer } from "./pointer.js";
 import { createInterpreter, createSmoother, smoothingToK } from "./interpreter.js";
 import { sampleLine } from "./scanner.js";
 import { createOutput, stampText } from "./output.js";
-import { createTestSource, loadUrlSource } from "./source.js";
+import { createTestSource, loadImageSource, loadUrlSource } from "./source.js";
 import { createView } from "./view.js";
 import { initUI } from "./ui.js";
 import { PIECE } from "./piece.js";
@@ -21,19 +21,32 @@ export const state = {
   live: false,       // a strip was written this frame
   startedAt: null,   // performance.now() of the first strip on this sheet
   lastAt: 0,         // … and of the latest one
-  done: false,       // the sheet is full and stamped; it can be taken
-  stamp: "",
+  done: false,       // the sheet is full and stamped
+  stamp: "",         // set when the sheet is full, or when it is taken unfinished
+  taking: false,     // being saved; scanning is held
   leaving: false,    // taken, sliding off the page
 };
 
 let strip = new Uint8ClampedArray(0);
 let imageIndex = 0;
-let taking = false;
 
 function resetOutput() {
   state.output = createOutput({ ...PIECE.paper, direction: DIRECTION });
   strip = new Uint8ClampedArray(state.output.stripLength * 4);
-  Object.assign(state, { startedAt: null, lastAt: 0, done: false, stamp: "", leaving: false });
+  Object.assign(state, { startedAt: null, lastAt: 0, done: false, stamp: "", taking: false, leaving: false });
+}
+
+/** The image can be swapped only before anything has been scanned. */
+export const canChangeImage = () => Boolean(state.source && state.output.pos === 0 && !state.leaving);
+
+/** Only a full, stamped sheet can be taken. */
+export const canTake = () => Boolean(state.done && !state.taking && !state.leaving);
+
+/** Swap in the viewer's own image. Throws if the file can't be read. */
+export async function changeImage(file) {
+  if (!file || !canChangeImage()) return;
+  const src = await loadImageSource(file);
+  if (canChangeImage()) setSource(src);   // still blank: nothing was scanned while it loaded
 }
 
 function setSource(src) {
@@ -66,20 +79,19 @@ function save(blob) {
 
 /** Take the finished sheet: download it, let it slide away, start the next image. */
 export async function takeSheet() {
-  if (!state.done || taking) return;
-  taking = true;
+  if (!canTake()) return;
+  state.taking = true;
   try {
     save(await state.output.toSheetBlob(state.stamp));
   } catch (err) {
     console.warn("the sheet could not be saved", err);
-    taking = false;
-    return;   // the sheet stays; clicking again retries
+    state.taking = false;
+    return;   // the sheet stays; taking again retries
   }
   state.leaving = true;
   imageIndex = (imageIndex + 1) % PIECE.images.length;
   const [next] = await Promise.all([loadImage(imageIndex), wait(LEAVE_MS)]);
   setSource(next);
-  taking = false;
 }
 
 const tracker = createTracker();
@@ -116,7 +128,7 @@ new p5((p) => {
     const slit = smoother.update(target, SMOOTHING);
 
     const out = state.output;
-    const scanning = Boolean(engaged && slit && !out.full);
+    const scanning = Boolean(engaged && slit && !out.full && !state.taking && !state.leaving);
     if (scanning) {
       sampleLine(state.source, slit, out.stripLength, strip);
       out.write(strip, PIECE.thickness);
@@ -130,6 +142,6 @@ new p5((p) => {
     }
 
     state.live = scanning;
-    view.draw({ ...state, slit, hands, tracker, pinched });
+    view.draw({ ...state, takeable: canTake(), slit, hands, tracker, pinched });
   };
 });

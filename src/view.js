@@ -37,7 +37,7 @@ function createTray(parent) {
    * r: rect of the full image inside the plate; m, foot: the sheet's border and
    * foot in css px. The newest row sits at the slot; the foot leads out.
    */
-  function update(r, m, foot, output, { stamp, done, leaving }) {
+  function update(r, m, foot, output, { stamp, takeable, leaving }) {
     const sheetW = r.w + m * 2;
     const sheetTop = r.y - m;
     const slotTop = sheetTop - SLOT_H + 1;
@@ -53,13 +53,11 @@ function createTray(parent) {
     if (els.print.firstChild !== output.canvas) els.print.replaceChildren(output.canvas);
     Object.assign(output.canvas.style, { left: px(m), bottom: px(foot), width: px(r.w), height: px(r.h) });
 
-    // the stamp is printed into the foot once the sheet is full
+    // the stamp is printed into the foot when the sheet is full or taken
     Object.assign(els.stamp.style, { left: px(m), height: px(foot), lineHeight: px(foot), fontSize: `${(r.w * SHEET.type).toFixed(1)}px` });
-    const text = done ? stamp : "";
-    if (els.stamp.textContent !== text) els.stamp.textContent = text;
+    if (els.stamp.textContent !== stamp) els.stamp.textContent = stamp;
 
-    const takeable = done && !leaving;
-    els.sheet.classList.toggle("done", takeable);
+    els.sheet.classList.toggle("takeable", takeable);
     els.sheet.classList.toggle("leaving", leaving);
     if (takeable !== (els.sheet.getAttribute("role") === "button")) {
       if (takeable) {
@@ -132,8 +130,8 @@ export function createView(p) {
     tray.update({ x: ox + m, y: SLOT_GAP + m, w, h: w / a }, m, w * SHEET.foot, output, sheetState);
   }
 
-  function draw({ source, output, slit, hands, tracker, live, pinched, stamp, done, leaving }) {
-    layout(source, output, { stamp, done, leaving });
+  function draw({ source, output, slit, hands, tracker, live, pinched, stamp, takeable, leaving }) {
+    layout(source, output, { stamp, takeable, leaving });
     const ctx = p.drawingContext;
     const toPx = (pt) => [img.x + pt.x * img.w, img.y + pt.y * img.h];
 

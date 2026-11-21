@@ -105,6 +105,11 @@ body::before {
   display: none;
 }
 
+.links {
+  display: flex;
+  gap: 18px;
+}
+
 /* ---- plates (view.js sizes and places their contents every frame) ---- */
 
 .plate {
@@ -132,19 +137,24 @@ body::before {
   z-index: 1;
 }
 
-/* the camera switch is a word */
+/* the few actions are faint words: no underline until you reach for them */
 .txt {
   padding: 0;
   margin: 0;
   border: 0;
   background: none;
   font: inherit;
-  color: var(--grey);
+  color: var(--faint);
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: var(--faint);
+  text-decoration-color: transparent;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.txt[hidden] {
+  display: none;
 }
 
 .txt:hover {
@@ -227,15 +237,15 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 
-/* a finished sheet can be taken */
-.sheet.done {
+/* a finished sheet can be taken: only a pointer cursor and a deeper shadow say so */
+.sheet.takeable {
   pointer-events: auto;
   cursor: pointer;
   transition: box-shadow 0.2s;
 }
 
-.sheet.done:hover,
-.sheet.done:focus-visible {
+.sheet.takeable:hover,
+.sheet.takeable:focus-visible {
   outline: none;
   box-shadow:
     0 1px 1px rgba(70, 60, 45, 0.16),

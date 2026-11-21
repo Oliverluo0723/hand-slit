@@ -25,7 +25,11 @@
         <figure id="figSource" class="plate"></figure>
         <div class="cam">
           <canvas id="camThumb" width="240" height="180" hidden></canvas>
-          <button id="camBtn" class="txt">關閉鏡頭</button>
+          <div class="links">
+            <button id="imageBtn" class="txt" hidden>換一張圖</button>
+            <button id="camBtn" class="txt">關閉鏡頭</button>
+          </div>
+          <input id="fileInput" type="file" accept="image/*" hidden />
         </div>
       </header>
 
