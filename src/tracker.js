@@ -14,6 +14,37 @@ export function freshHands(hands, lastDetectAt, now, staleMs = STALE_MS) {
   return now - lastDetectAt > staleMs ? [] : hands;
 }
 
+/** Download fraction 0–1, or null when the size is unknown (or the body was compressed). */
+export function downloadFraction(loaded, total) {
+  if (!total || loaded > total) return null;
+  return loaded / total;
+}
+
+/** Fetch a file whole, reporting progress as it streams in. */
+async function fetchWithProgress(url, onProgress) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  const total = Number(res.headers.get("content-length")) || 0;
+  if (!res.body) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    onProgress(downloadFraction(loaded, total));
+  }
+  const buf = new Uint8Array(loaded);
+  let at = 0;
+  for (const c of chunks) {
+    buf.set(c, at);
+    at += c.length;
+  }
+  return buf;
+}
+
 export function createTracker() {
   const video = document.createElement("video");
   video.muted = true;
@@ -28,9 +59,18 @@ export function createTracker() {
 
   let run = 0;          // bumps on every start/stop so a stale start gives up
   let looping = false;
+  let model = null;     // Promise of the landmarker; shared by every start, cleared if it fails
+
+  /** What "loading" is waiting on, for the page to show. */
+  const load = {
+    waitingCamera: false,  // the browser is asking for camera permission
+    phase: "download",     // download | init (the model is in, the tracker is starting up)
+    progress: 0,           // model download 0–1, null when unknown
+  };
 
   const tracker = {
     status: "loading",   // loading | ready | no-camera | error | off
+    load,
     video,
     fps: 0,
     getHands: () => freshHands(hands, lastDetectAt, performance.now()),
@@ -52,9 +92,47 @@ export function createTracker() {
     tracker.status = "off";
   }
 
+  /**
+   * Download the model ourselves so its progress can be shown, warm the wasm
+   * into the HTTP cache alongside it, then start the landmarker.
+   */
+  function loadModel() {
+    model ??= (async () => {
+      Object.assign(load, { phase: "download", progress: 0 });
+      const bundle = import(MP_BUNDLE);
+      const fileset = bundle.then(({ FilesetResolver }) => FilesetResolver.forVisionTasks(MP_WASM));
+      const wasm = fileset
+        .then((fs) => fs?.wasmBinaryPath && fetch(fs.wasmBinaryPath).then((r) => r.arrayBuffer()))
+        .catch(() => {});   // only a head start; the loader fetches it again if this failed
+      const buf = await fetchWithProgress(HAND_MODEL, (f) => (load.progress = f));
+      load.progress = 1;
+      await wasm;
+      load.phase = "init";
+      const { HandLandmarker } = await bundle;
+      const fs = await fileset;
+      const create = (delegate) =>
+        HandLandmarker.createFromOptions(fs, {
+          baseOptions: { modelAssetBuffer: buf, delegate },
+          runningMode: "VIDEO",
+          numHands: 2,
+        });
+      try {
+        return await create("GPU");
+      } catch (gpuErr) {
+        console.warn("GPU delegate unavailable, falling back to CPU", gpuErr);
+        return await create("CPU");
+      }
+    })();
+    model.catch(() => (model = null));   // a later start tries again
+    return model;
+  }
+
   async function start() {
     const me = ++run;
     tracker.status = "loading";
+    // the model downloads while the browser is still asking about the camera
+    if (!landmarker) loadModel().catch(() => {});
+    load.waitingCamera = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
@@ -74,26 +152,13 @@ export function createTracker() {
     } catch (err) {
       if (me === run) tracker.status = "no-camera";
       return;
+    } finally {
+      if (me === run) load.waitingCamera = false;
     }
 
     if (!landmarker) {
       try {
-        const { FilesetResolver, HandLandmarker } = await import(MP_BUNDLE);
-        const fileset = await FilesetResolver.forVisionTasks(MP_WASM);
-        const create = (delegate) =>
-          HandLandmarker.createFromOptions(fileset, {
-            baseOptions: { modelAssetPath: HAND_MODEL, delegate },
-            runningMode: "VIDEO",
-            numHands: 2,
-          });
-        let made;
-        try {
-          made = await create("GPU");
-        } catch (gpuErr) {
-          console.warn("GPU delegate unavailable, falling back to CPU", gpuErr);
-          made = await create("CPU");
-        }
-        landmarker ??= made;
+        landmarker ??= await loadModel();
       } catch (err) {
         console.error("Hand tracking failed to start", err);
         if (me === run) tracker.status = "error";

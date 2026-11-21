@@ -77,11 +77,66 @@ body::before {
 
 /* tracking notices, faint, under the one line of instructions */
 .hint {
-  margin: 0 0 22px;
+  margin: 0;
   min-height: 1.7em;
   max-width: 13em;
   color: var(--faint);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* while the camera and hand model come up, the notice is meant to be seen */
+.hint.loud {
+  color: var(--grey);
+}
+
+/* a hairline under the notice: fills with the download, sweeps while starting up.
+   Its room is always kept so nothing jumps when it goes. */
+.loadbar {
+  position: relative;
+  height: 1px;
+  max-width: 13em;
+  margin: 4px 0 22px;
+  overflow: hidden;
+  background: rgba(26, 25, 23, 0.12);
+}
+
+.loadbar[hidden] {
+  display: block;
+  visibility: hidden;
+}
+
+.loadbar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--ink);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.25s linear;
+}
+
+.loadbar.busy i {
+  width: 30%;
+  transform: none;
+  transition: none;
+  animation: loadbar-sweep 1.3s ease-in-out infinite;
+}
+
+@keyframes loadbar-sweep {
+  from { left: -30%; }
+  to { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadbar.busy i {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.4;
+  }
 }
 
 /* a small camera view at the foot of the left column, so you can find its frame */

@@ -18,6 +18,7 @@ export const state = {
   source: null,
   output: null,
   notice: "",        // tracking status shown under the instructions, "" when fine
+  loading: null,     // tracker.load while the camera / hand model is coming up
   live: false,       // a strip was written this frame
   startedAt: null,   // performance.now() of the first strip on this sheet
   lastAt: 0,         // … and of the latest one
@@ -99,9 +100,15 @@ const smoother = createSmoother();
 const interpreter = createInterpreter();
 window.handSlit = { state, tracker };   // for debugging in the console
 
+function loadingNotice({ waitingCamera, phase, progress }) {
+  if (waitingCamera) return "請允許瀏覽器使用鏡頭";
+  if (phase === "init") return "啟動手部追蹤…";
+  return progress == null ? "下載手部模型…" : `下載手部模型 ${Math.floor(progress * 100)}%`;
+}
+
 function trackingNotice() {
   if (tracker.status === "no-camera") return "沒有鏡頭，用滑鼠拖曳";
-  if (tracker.status === "loading") return "載入手部模型中…";
+  if (tracker.status === "loading") return loadingNotice(tracker.load);
   if (tracker.status === "error") return "手部追蹤無法啟動，用滑鼠拖曳";
   if (tracker.status === "off") return "鏡頭已關閉，用滑鼠拖曳";
   return "";
@@ -121,6 +128,7 @@ new p5((p) => {
 
   p.draw = () => {
     state.notice = trackingNotice();
+    state.loading = tracker.status === "loading" ? tracker.load : null;
     if (!state.source) return;   // the first image is still loading
 
     const hands = tracker.getHands();

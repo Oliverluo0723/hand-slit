@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { freshHands } from "../src/tracker.js";
+import { downloadFraction, freshHands } from "../src/tracker.js";
 import { isPrimaryPress, isReleasedMove } from "../src/pointer.js";
 import { slitFromHands, smoothingToK } from "../src/interpreter.js";
 
@@ -44,4 +44,12 @@ test("smoothing percent is strength: 0 = follow instantly, more = slower", () =>
   assert.ok(smoothingToK(65) < smoothingToK(30));
   assert.ok(Math.abs(smoothingToK(65) - 0.35) < 1e-9);
   assert.ok(smoothingToK(95) > 0);
+});
+
+test("download fraction: known size counts up; unknown or compressed size has none", () => {
+  assert.equal(downloadFraction(0, 100), 0);
+  assert.equal(downloadFraction(42, 100), 0.42);
+  assert.equal(downloadFraction(100, 100), 1);
+  assert.equal(downloadFraction(10, 0), null);     // no content-length
+  assert.equal(downloadFraction(150, 100), null);  // body larger than the header: compressed
 });

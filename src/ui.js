@@ -53,9 +53,25 @@ async function useFile(file) {
   }
 }
 
+/**
+ * While the camera and hand model come up: the notice is darker, and a hairline
+ * fills with the model download, then sweeps while the tracker starts (no
+ * progress to measure there), so the page never looks stuck.
+ */
+function showLoading(load) {
+  const bar = $("loadbar");
+  $("hint").classList.toggle("loud", Boolean(load));
+  if (bar.hidden !== !load) bar.hidden = !load;
+  if (!load) return;
+  const busy = load.phase === "init" || load.progress == null;
+  bar.classList.toggle("busy", busy);
+  bar.firstElementChild.style.transform = busy ? "" : `scaleX(${load.progress})`;
+}
+
 function tick() {
   setText($("how"), state.done && !state.leaving ? DONE : HOW);
   setText($("hint"), fileError || state.notice);
+  showLoading(state.loading);
   // "換一張圖" is there only until the first strip is scanned
   const swap = $("imageBtn");
   if (swap.hidden === canChangeImage()) swap.hidden = !swap.hidden;
